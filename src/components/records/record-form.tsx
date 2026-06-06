@@ -11,6 +11,7 @@ import {
 } from "@/lib/constants/categories";
 import type { RecordCategory } from "@/lib/types/record";
 import { getTodayDateString } from "@/lib/utils/date";
+import { DrinkIdentityFields } from "./drink-identity-fields";
 import { FlavorMetricsInput } from "./flavor-metrics-input";
 import { RatingInput } from "./rating-input";
 
@@ -76,38 +77,14 @@ export function RecordForm() {
             </select>
           </div>
 
-          <div>
-            <label
-              htmlFor="drink_name"
-              className="mb-1.5 block text-sm font-medium text-zinc-700"
-            >
-              名前
-            </label>
-            <input
-              id="drink_name"
-              name="drink_name"
-              type="text"
-              required
-              placeholder="銘柄名・商品名"
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="drink_sub_info"
-              className="mb-1.5 block text-sm font-medium text-zinc-700"
-            >
-              補助情報
-            </label>
-            <input
-              id="drink_sub_info"
-              name="drink_sub_info"
-              type="text"
-              placeholder="蔵元、スタイル、生産地 など"
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-            />
-          </div>
+          <DrinkIdentityFields
+            key={drinkCategory}
+            enableSakeSuggest={drinkCategory === "japanese-sake"}
+            nameField="drink_name"
+            subInfoField="drink_sub_info"
+            nameId="drink_name"
+            subInfoId="drink_sub_info"
+          />
 
           <RatingInput name="drink_rating" label="総合評価" />
           <FlavorMetricsInput prefix="drink" category={drinkCategory} />

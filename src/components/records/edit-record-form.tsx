@@ -10,6 +10,7 @@ import {
   DRINK_CATEGORIES,
 } from "@/lib/constants/categories";
 import type { RecordCategory, SakememRecord } from "@/lib/types/record";
+import { DrinkIdentityFields } from "./drink-identity-fields";
 import { FlavorMetricsInput } from "./flavor-metrics-input";
 import { RatingInput } from "./rating-input";
 
@@ -81,38 +82,16 @@ export function EditRecordForm({ record }: EditRecordFormProps) {
         </select>
       </div>
 
-      <div>
-        <label
-          htmlFor="name"
-          className="mb-1.5 block text-sm font-medium text-zinc-700"
-        >
-          名前
-        </label>
-        <input
-          id="name"
-          name="name"
-          type="text"
-          required
-          defaultValue={record.name}
-          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-        />
-      </div>
-
-      <div>
-        <label
-          htmlFor="sub_info"
-          className="mb-1.5 block text-sm font-medium text-zinc-700"
-        >
-          補助情報
-        </label>
-        <input
-          id="sub_info"
-          name="sub_info"
-          type="text"
-          defaultValue={record.sub_info ?? ""}
-          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-        />
-      </div>
+      <DrinkIdentityFields
+        key={category}
+        enableSakeSuggest={category === "japanese-sake"}
+        nameField="name"
+        subInfoField="sub_info"
+        nameId="name"
+        subInfoId="sub_info"
+        defaultName={record.name}
+        defaultSubInfo={record.sub_info ?? ""}
+      />
 
       <RatingInput
         name="rating"
