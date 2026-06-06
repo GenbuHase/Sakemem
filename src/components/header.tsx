@@ -18,6 +18,18 @@ export async function Header() {
         <nav className="flex items-center gap-4 text-sm">
           {user ? (
             <>
+              <Link
+                href="/records"
+                className="font-medium text-zinc-700 transition hover:text-zinc-900"
+              >
+                タイムライン
+              </Link>
+              <Link
+                href="/records/new"
+                className="rounded-lg bg-zinc-900 px-3 py-1.5 font-medium text-white transition hover:bg-zinc-800"
+              >
+                記録する
+              </Link>
               <span className="hidden text-zinc-500 sm:inline">{user.email}</span>
               <form action={signOut}>
                 <button

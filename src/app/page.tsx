@@ -21,9 +21,20 @@ export default async function Home() {
         </p>
 
         {user ? (
-          <p className="mt-8 text-sm text-zinc-500">
-            ログイン中: <span className="text-zinc-700">{user.email}</span>
-          </p>
+          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Link
+              href="/records"
+              className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800"
+            >
+              タイムラインを見る
+            </Link>
+            <Link
+              href="/records/new"
+              className="rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100"
+            >
+              記録する
+            </Link>
+          </div>
         ) : (
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link

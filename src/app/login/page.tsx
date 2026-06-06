@@ -6,11 +6,11 @@ export const metadata: Metadata = {
 };
 
 type LoginPageProps = {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-16">
@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           {error}
         </p>
       ) : null}
-      <AuthForm mode="login" />
+      <AuthForm mode="login" nextPath={next} />
     </div>
   );
 }
