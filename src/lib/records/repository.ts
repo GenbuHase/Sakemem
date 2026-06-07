@@ -103,6 +103,21 @@ export async function setRecordsPairId(
   }
 }
 
+export async function mergePairIds(
+  supabase: SupabaseClient,
+  fromPairId: string,
+  toPairId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from(RECORDS_TABLE)
+    .update({ pair_id: toPairId })
+    .eq("pair_id", fromPairId);
+
+  if (error) {
+    throw new Error("ペアの統合に失敗しました。");
+  }
+}
+
 /**
  * 指定 pair_id を持つレコードが 1 件以下になった場合に pair_id を解除する。
  * （ペアの片方が削除/解除されると残った 1 件は単独記録に戻す仕様）

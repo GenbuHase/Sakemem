@@ -84,7 +84,7 @@ describe("pairing helpers", () => {
     expect(getPartners([drink, food1, food2], drink)).toEqual([food1, food2]);
   });
 
-  it("returns unpaired candidates even when current record is paired", () => {
+  it("returns unpaired and other-pair candidates when current record is paired", () => {
     const drink = createRecord({
       id: "drink-1",
       category: "beer",
@@ -102,13 +102,22 @@ describe("pairing helpers", () => {
       category: "food",
       name: "チーズ",
     });
+    const otherPairedFood = createRecord({
+      id: "food-3",
+      category: "food",
+      name: "焼き鳥",
+      pair_id: "pair-2",
+    });
 
     expect(
-      filterLinkCandidates([pairedFood, unpairedFood], drink),
-    ).toEqual([unpairedFood]);
+      filterLinkCandidates(
+        [pairedFood, unpairedFood, otherPairedFood],
+        drink,
+      ),
+    ).toEqual([unpairedFood, otherPairedFood]);
   });
 
-  it("filters unpaired opposite-type candidates", () => {
+  it("filters opposite-type candidates and excludes current partners", () => {
     const drink = createRecord({
       id: "drink-1",
       category: "beer",
@@ -133,6 +142,6 @@ describe("pairing helpers", () => {
 
     expect(
       filterLinkCandidates([food, pairedFood, otherDrink], drink),
-    ).toEqual([food]);
+    ).toEqual([food, pairedFood]);
   });
 });

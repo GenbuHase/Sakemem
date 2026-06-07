@@ -145,7 +145,7 @@ function LinkForm({
     if (partnersExist) return null;
     return (
       <p className="text-sm text-zinc-500">
-        ペアにできる未ペアの記録がありません。
+        ペアにできる記録がありません。
       </p>
     );
   }

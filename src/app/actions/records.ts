@@ -21,6 +21,7 @@ import {
   fetchAllRecords,
   fetchRecordById,
   insertRecords,
+  mergePairIds,
   setRecordsPairId,
   updateRecordById,
   type RecordInsert,
@@ -252,8 +253,16 @@ export async function linkRecordPair(
       return { error: "お酒とおつまみのみペアにできます。" };
     }
 
-    const pairId = record.pair_id ?? partner.pair_id ?? randomUUID();
-    await setRecordsPairId(supabase, [record.id, partner.id], pairId);
+    if (
+      record.pair_id &&
+      partner.pair_id &&
+      record.pair_id !== partner.pair_id
+    ) {
+      await mergePairIds(supabase, partner.pair_id, record.pair_id);
+    } else {
+      const pairId = record.pair_id ?? partner.pair_id ?? randomUUID();
+      await setRecordsPairId(supabase, [record.id, partner.id], pairId);
+    }
   } catch (error) {
     return toErrorState(error, "ペアの設定に失敗しました。");
   }

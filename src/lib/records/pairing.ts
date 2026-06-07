@@ -17,8 +17,10 @@ export function filterLinkCandidates(
   return records.filter(
     (record) =>
       record.id !== current.id &&
-      record.pair_id === null &&
-      isFoodCategory(record.category) !== currentIsFood,
+      isFoodCategory(record.category) !== currentIsFood &&
+      !(
+        current.pair_id !== null && record.pair_id === current.pair_id
+      ),
   );
 }
 
