@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState, type Dispatch, type SetStateAction } from "react";
-import { LinkButton } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { cx } from "@/components/ui/styles";
 
 const NAV_LINK_CLASS =
@@ -58,7 +58,14 @@ export function HeaderNav({ isLoggedIn, signOutAction }: HeaderNavProps) {
     return (
       <>
         <div className="hidden items-center gap-1.5 sm:flex sm:gap-2">
-          <NavLink href="/login">ログイン</NavLink>
+          <LinkButton
+            href="/login"
+            variant="secondary"
+            size="sm"
+            className="whitespace-nowrap"
+          >
+            ログイン
+          </LinkButton>
           <LinkButton href="/signup" size="sm" className="whitespace-nowrap">
             新規登録
           </LinkButton>
@@ -70,12 +77,16 @@ export function HeaderNav({ isLoggedIn, signOutAction }: HeaderNavProps) {
           onClose={() => setMenuOpen(false)}
           onToggle={() => setMenuOpen((current) => !current)}
         >
-          <MobileNavLink
+          <LinkButton
             href="/login"
-            onNavigate={() => setMenuOpen(false)}
+            variant="secondary"
+            size="sm"
+            fullWidth
+            className="whitespace-nowrap"
+            onClick={() => setMenuOpen(false)}
           >
             ログイン
-          </MobileNavLink>
+          </LinkButton>
           <LinkButton
             href="/signup"
             size="sm"
@@ -98,15 +109,14 @@ export function HeaderNav({ isLoggedIn, signOutAction }: HeaderNavProps) {
           記録する
         </LinkButton>
         <form action={signOutAction}>
-          <button
+          <Button
             type="submit"
-            className={cx(
-              NAV_LINK_CLASS,
-              "whitespace-nowrap text-zinc-500 hover:text-zinc-900",
-            )}
+            variant="secondary"
+            size="sm"
+            className="whitespace-nowrap"
           >
             ログアウト
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -131,16 +141,16 @@ export function HeaderNav({ isLoggedIn, signOutAction }: HeaderNavProps) {
         >
           記録する
         </LinkButton>
-        <form action={signOutAction}>
-          <button
+        <form action={signOutAction} className="w-full">
+          <Button
             type="submit"
-            className={cx(
-              MOBILE_NAV_LINK_CLASS,
-              "w-full text-left text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900",
-            )}
+            variant="secondary"
+            size="sm"
+            fullWidth
+            className="whitespace-nowrap"
           >
             ログアウト
-          </button>
+          </Button>
         </form>
       </MobileMenu>
     </>
