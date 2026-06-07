@@ -18,22 +18,46 @@ import { RatingInput } from "./rating-input";
 const initialState: RecordActionState | null = null;
 
 type PairFoodFieldsProps = {
+  index: number;
   required?: boolean;
+  onRemove?: () => void;
 };
 
-function PairFoodFields({ required = false }: PairFoodFieldsProps) {
+function PairFoodFields({
+  index,
+  required = false,
+  onRemove,
+}: PairFoodFieldsProps) {
+  const prefix = `pair_${index}`;
+  const nameId = `${prefix}_name`;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 rounded-lg border border-zinc-200 bg-white p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h4 className="text-sm font-semibold text-zinc-900">
+          おつまみ {index + 1}
+        </h4>
+        {onRemove ? (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="text-sm text-zinc-500 transition hover:text-zinc-700"
+          >
+            削除
+          </button>
+        ) : null}
+      </div>
+
       <div>
         <label
-          htmlFor="pair_name"
+          htmlFor={nameId}
           className="mb-1.5 block text-sm font-medium text-zinc-700"
         >
           おつまみの名前
         </label>
         <input
-          id="pair_name"
-          name="pair_name"
+          id={nameId}
+          name={`${prefix}_name`}
           type="text"
           required={required}
           placeholder="枝豆、焼き鳥 など"
@@ -43,33 +67,33 @@ function PairFoodFields({ required = false }: PairFoodFieldsProps) {
 
       <div>
         <label
-          htmlFor="pair_sub_info"
+          htmlFor={`${prefix}_sub_info`}
           className="mb-1.5 block text-sm font-medium text-zinc-700"
         >
           補助情報
         </label>
         <input
-          id="pair_sub_info"
-          name="pair_sub_info"
+          id={`${prefix}_sub_info`}
+          name={`${prefix}_sub_info`}
           type="text"
           placeholder="ジャンル、店名 など"
           className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
         />
       </div>
 
-      <RatingInput name="pair_rating" label="総合評価" />
-      <FlavorMetricsInput prefix="pair" category="food" />
+      <RatingInput name={`${prefix}_rating`} label="総合評価" />
+      <FlavorMetricsInput prefix={prefix} category="food" />
 
       <div>
         <label
-          htmlFor="pair_comment"
+          htmlFor={`${prefix}_comment`}
           className="mb-1.5 block text-sm font-medium text-zinc-700"
         >
           メモ
         </label>
         <textarea
-          id="pair_comment"
-          name="pair_comment"
+          id={`${prefix}_comment`}
+          name={`${prefix}_comment`}
           rows={3}
           placeholder="感想やメモ"
           className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
@@ -86,6 +110,7 @@ export function RecordForm() {
   );
   const [category, setCategory] = useState<RecordCategory>("japanese-sake");
   const [includePairFood, setIncludePairFood] = useState(false);
+  const [pairFoodCount, setPairFoodCount] = useState(1);
 
   const isFood = isFoodCategory(category);
 
@@ -192,13 +217,33 @@ export function RecordForm() {
               </label>
 
               {includePairFood ? (
-                <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-                  <h3 className="text-sm font-semibold text-zinc-900">
-                    おつまみ
-                  </h3>
-                  <div className="mt-3">
-                    <PairFoodFields required />
+                <div className="mt-4 space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                  <input
+                    type="hidden"
+                    name="pair_food_count"
+                    value={pairFoodCount}
+                  />
+                  <div className="space-y-3">
+                    {Array.from({ length: pairFoodCount }, (_, index) => (
+                      <PairFoodFields
+                        key={index}
+                        index={index}
+                        required={index === 0}
+                        onRemove={
+                          pairFoodCount > 1 && index === pairFoodCount - 1
+                            ? () => setPairFoodCount((count) => count - 1)
+                            : undefined
+                        }
+                      />
+                    ))}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setPairFoodCount((count) => count + 1)}
+                    className="text-sm font-medium text-zinc-700 transition hover:text-zinc-900"
+                  >
+                    + おつまみを追加
+                  </button>
                 </div>
               ) : null}
             </div>

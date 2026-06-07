@@ -182,29 +182,37 @@ export async function createRecords(
     });
 
     if (includePairFood) {
-      const pairName = String(formData.get("pair_name") ?? "").trim();
+      const pairFoodCount = Number(formData.get("pair_food_count") ?? 1);
 
-      if (!pairName) {
-        return {
-          error: "おつまみを同時に記録する場合は名前を入力してください。",
-        };
+      if (!Number.isInteger(pairFoodCount) || pairFoodCount < 1) {
+        return { error: "おつまみの件数が不正です。" };
       }
-
-      records.push({
-        user_id: user.id,
-        pair_id: null,
-        date,
-        category: "food",
-        name: pairName,
-        sub_info: parseOptionalText(formData, "pair_sub_info"),
-        rating: parseOptionalRating(formData, "pair_rating"),
-        flavor_metrics: parseFlavorMetrics(formData, "pair", "food"),
-        comment: parseOptionalText(formData, "pair_comment"),
-      });
 
       const pairId = randomUUID();
       records[0].pair_id = pairId;
-      records[1].pair_id = pairId;
+
+      for (let index = 0; index < pairFoodCount; index += 1) {
+        const prefix = `pair_${index}`;
+        const pairName = String(formData.get(`${prefix}_name`) ?? "").trim();
+
+        if (!pairName) {
+          return {
+            error: `おつまみ ${index + 1} の名前を入力してください。`,
+          };
+        }
+
+        records.push({
+          user_id: user.id,
+          pair_id: pairId,
+          date,
+          category: "food",
+          name: pairName,
+          sub_info: parseOptionalText(formData, `${prefix}_sub_info`),
+          rating: parseOptionalRating(formData, `${prefix}_rating`),
+          flavor_metrics: parseFlavorMetrics(formData, prefix, "food"),
+          comment: parseOptionalText(formData, `${prefix}_comment`),
+        });
+      }
     }
   }
 

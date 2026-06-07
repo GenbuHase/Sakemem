@@ -61,6 +61,53 @@ describe("pairing helpers", () => {
     expect(getPartners([drink, food, single], drink)).toEqual([food]);
   });
 
+  it("returns all partners in a multi-item pair", () => {
+    const drink = createRecord({
+      id: "drink-1",
+      category: "beer",
+      name: "IPA",
+      pair_id: "pair-1",
+    });
+    const food1 = createRecord({
+      id: "food-1",
+      category: "food",
+      name: "枝豆",
+      pair_id: "pair-1",
+    });
+    const food2 = createRecord({
+      id: "food-2",
+      category: "food",
+      name: "焼き鳥",
+      pair_id: "pair-1",
+    });
+
+    expect(getPartners([drink, food1, food2], drink)).toEqual([food1, food2]);
+  });
+
+  it("returns unpaired candidates even when current record is paired", () => {
+    const drink = createRecord({
+      id: "drink-1",
+      category: "beer",
+      name: "IPA",
+      pair_id: "pair-1",
+    });
+    const pairedFood = createRecord({
+      id: "food-1",
+      category: "food",
+      name: "枝豆",
+      pair_id: "pair-1",
+    });
+    const unpairedFood = createRecord({
+      id: "food-2",
+      category: "food",
+      name: "チーズ",
+    });
+
+    expect(
+      filterLinkCandidates([pairedFood, unpairedFood], drink),
+    ).toEqual([unpairedFood]);
+  });
+
   it("filters unpaired opposite-type candidates", () => {
     const drink = createRecord({
       id: "drink-1",

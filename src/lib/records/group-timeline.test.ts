@@ -44,4 +44,37 @@ describe("groupRecordsForTimeline", () => {
     expect(entries.some((entry) => entry.kind === "paired")).toBe(true);
     expect(entries.some((entry) => entry.kind === "single")).toBe(true);
   });
+
+  it("groups one drink with multiple foods", () => {
+    const entries = groupRecordsForTimeline([
+      makeRecord({
+        id: "drink-1",
+        category: "beer",
+        name: "エビス",
+        pair_id: "pair-1",
+      }),
+      makeRecord({
+        id: "food-1",
+        category: "food",
+        name: "枝豆",
+        pair_id: "pair-1",
+      }),
+      makeRecord({
+        id: "food-2",
+        category: "food",
+        name: "焼き鳥",
+        pair_id: "pair-1",
+      }),
+    ]);
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      kind: "paired",
+      drinks: [expect.objectContaining({ id: "drink-1" })],
+      foods: [
+        expect.objectContaining({ id: "food-1" }),
+        expect.objectContaining({ id: "food-2" }),
+      ],
+    });
+  });
 });
