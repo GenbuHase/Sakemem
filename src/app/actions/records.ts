@@ -9,6 +9,7 @@ import {
   parseRecordCategory,
   parseRecordWritePayload,
   parseString,
+  parsePlace,
 } from "@/lib/records/parse-form";
 import {
   filterLinkCandidates,
@@ -101,6 +102,7 @@ export async function createRecords(
   const includePairFood =
     !isFoodCategory(category) && formData.get("include_pair_food") === "on";
   const pairId = includePairFood ? randomUUID() : null;
+  const place = parsePlace(formData);
 
   const inserts: RecordInsert[] = [
     {
@@ -111,6 +113,7 @@ export async function createRecords(
         date,
         category,
         name,
+        place,
       }),
     },
   ];
@@ -137,6 +140,7 @@ export async function createRecords(
           date,
           category: "food",
           name: pairName,
+          place,
         }),
       });
     }

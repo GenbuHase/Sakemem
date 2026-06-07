@@ -23,7 +23,9 @@ export type SakememRecord = {
   date: string;
   category: RecordCategory;
   name: string;
+  producer: string | null;
   sub_info: string | null;
+  place: string | null;
   rating: number | null;
   flavor_metrics: FlavorMetrics;
   comment: string | null;

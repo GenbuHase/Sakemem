@@ -37,9 +37,19 @@ export function RecordDetail({
           <h3 className="mt-2 text-base font-semibold text-zinc-900">
             {record.name}
           </h3>
+          {record.producer ? (
+            <p className="mt-0.5 truncate text-sm text-zinc-500">
+              {record.producer}
+            </p>
+          ) : null}
           {record.sub_info ? (
             <p className="mt-0.5 truncate text-sm text-zinc-500">
               {record.sub_info}
+            </p>
+          ) : null}
+          {record.place ? (
+            <p className="mt-0.5 truncate text-sm text-zinc-400">
+              {record.place}
             </p>
           ) : null}
         </div>

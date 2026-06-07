@@ -40,14 +40,23 @@ export function EditRecordForm({ record }: EditRecordFormProps) {
       <input type="hidden" name="id" value={record.id} />
 
       <SectionCard title="基本情報">
-        <TextInput
-          id="date"
-          name="date"
-          type="date"
-          label="日付"
-          required
-          defaultValue={record.date}
-        />
+        <div className="space-y-4">
+          <TextInput
+            id="date"
+            name="date"
+            type="date"
+            label="日付"
+            required
+            defaultValue={record.date}
+          />
+          <TextInput
+            id="place"
+            name="place"
+            label="場所"
+            placeholder="居酒屋名、自宅 など"
+            defaultValue={record.place ?? ""}
+          />
+        </div>
       </SectionCard>
 
       <SectionCard title="記録">
@@ -83,9 +92,10 @@ export function EditRecordForm({ record }: EditRecordFormProps) {
             nameLabel={isFood ? "おつまみの名前" : "名前"}
             namePlaceholder={isFood ? "枝豆、焼き鳥 など" : "銘柄名・商品名"}
             subInfoPlaceholder={
-              isFood ? "ジャンル、店名 など" : "蔵元、スタイル、生産地 など"
+              isFood ? "ジャンル、調理法 など" : "スタイル、生産地 など"
             }
             defaultName={record.name}
+            defaultProducer={record.producer ?? ""}
             defaultSubInfo={record.sub_info ?? ""}
             defaultRating={record.rating}
             defaultComment={record.comment ?? ""}

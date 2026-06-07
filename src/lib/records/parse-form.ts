@@ -1,3 +1,4 @@
+import { isFoodCategory } from "@/lib/constants/categories";
 import { FLAVOR_METRICS_BY_CATEGORY } from "@/lib/constants/flavor-metrics";
 import {
   RECORD_CATEGORIES,
@@ -65,17 +66,31 @@ export function parseRecordCategory(value: string): RecordCategory | null {
  * フォームから 1 件分のレコード書き込みペイロードを構築する。
  * date / category / name の必須・型を検証して返す。
  */
+export function parsePlace(formData: FormData): string | null {
+  return parseOptionalText(formData, "place");
+}
+
 export function parseRecordWritePayload(
   formData: FormData,
-  options: { prefix: string; date: string; category: RecordCategory; name: string },
+  options: {
+    prefix: string;
+    date: string;
+    category: RecordCategory;
+    name: string;
+    place?: string | null;
+  },
 ): RecordWritePayload {
-  const { prefix, date, category, name } = options;
+  const { prefix, date, category, name, place } = options;
 
   return {
     date,
     category,
     name,
+    producer: isFoodCategory(category)
+      ? null
+      : parseOptionalText(formData, `${prefix}_producer`),
     sub_info: parseOptionalText(formData, `${prefix}_sub_info`),
+    place: place ?? parsePlace(formData),
     rating: parseOptionalRating(formData, `${prefix}_rating`),
     flavor_metrics: parseFlavorMetrics(formData, prefix, category),
     comment: parseOptionalText(formData, `${prefix}_comment`),

@@ -43,7 +43,13 @@ export function hasActiveFilters(filters: RecordFilters): boolean {
 
 function matchesQuery(record: SakememRecord, query: string): boolean {
   const normalized = query.toLowerCase();
-  const fields = [record.name, record.sub_info, record.comment];
+  const fields = [
+    record.name,
+    record.producer,
+    record.sub_info,
+    record.place,
+    record.comment,
+  ];
 
   return fields.some(
     (value) => value && value.toLowerCase().includes(normalized),

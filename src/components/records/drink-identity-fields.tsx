@@ -9,36 +9,49 @@ import { SakenowaAttribution } from "./sakenowa-attribution";
 
 type DrinkIdentityFieldsProps = {
   enableSakeSuggest: boolean;
+  showProducer?: boolean;
   nameField: string;
+  producerField?: string;
   subInfoField: string;
   nameId: string;
+  producerId?: string;
   subInfoId: string;
   defaultName?: string;
+  defaultProducer?: string;
   defaultSubInfo?: string;
   nameLabel?: string;
+  producerLabel?: string;
   subInfoLabel?: string;
   namePlaceholder?: string;
+  producerPlaceholder?: string;
   subInfoPlaceholder?: string;
   nameRequired?: boolean;
 };
 
 export function DrinkIdentityFields({
   enableSakeSuggest,
+  showProducer = false,
   nameField,
+  producerField = "record_producer",
   subInfoField,
   nameId,
+  producerId = "record_producer",
   subInfoId,
   defaultName = "",
+  defaultProducer = "",
   defaultSubInfo = "",
   nameLabel = "名前",
+  producerLabel = "蔵元 / メーカー",
   subInfoLabel = "補助情報",
   namePlaceholder = "銘柄名・商品名",
-  subInfoPlaceholder = "蔵元、スタイル、生産地 など",
+  producerPlaceholder = "蔵元名、ビールメーカー など",
+  subInfoPlaceholder = "スタイル、生産地 など",
   nameRequired = true,
 }: DrinkIdentityFieldsProps) {
   const listboxId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState(defaultName);
+  const [producer, setProducer] = useState(defaultProducer);
   const [subInfo, setSubInfo] = useState(defaultSubInfo);
 
   const suggestions = useSakeSuggestions(
@@ -60,7 +73,9 @@ export function DrinkIdentityFields({
 
   function selectSuggestion(suggestion: SakeSuggestion) {
     setName(suggestion.brandName);
-    setSubInfo(suggestion.breweryName);
+    if (suggestion.breweryName) {
+      setProducer(suggestion.breweryName);
+    }
     suggestions.reset();
   }
 
@@ -68,9 +83,9 @@ export function DrinkIdentityFields({
     ? "銘柄名を入力すると候補が表示されます"
     : namePlaceholder;
 
-  const subInfoPlaceholderText = enableSakeSuggest
+  const producerPlaceholderText = enableSakeSuggest
     ? "蔵元名（候補選択で自動入力）"
-    : subInfoPlaceholder;
+    : producerPlaceholder;
 
   return (
     <div className="space-y-4">
@@ -141,13 +156,24 @@ export function DrinkIdentityFields({
         ) : null}
       </div>
 
+      {showProducer ? (
+        <TextInput
+          id={producerId}
+          name={producerField}
+          label={producerLabel}
+          value={producer}
+          onChange={(event) => setProducer(event.target.value)}
+          placeholder={producerPlaceholderText}
+        />
+      ) : null}
+
       <TextInput
         id={subInfoId}
         name={subInfoField}
         label={subInfoLabel}
         value={subInfo}
         onChange={(event) => setSubInfo(event.target.value)}
-        placeholder={subInfoPlaceholderText}
+        placeholder={subInfoPlaceholder}
       />
 
       {enableSakeSuggest ? <SakenowaAttribution /> : null}

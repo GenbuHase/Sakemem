@@ -9,7 +9,9 @@ CREATE TABLE public.records (
   date            date        NOT NULL,
   category        text        NOT NULL,
   name            text        NOT NULL,
+  producer        text,
   sub_info        text,
+  place           text,
   rating          integer     CHECK (rating IS NULL OR (rating >= 1 AND rating <= 5)),
   flavor_metrics  jsonb       DEFAULT '{}'::jsonb,
   comment         text,
@@ -39,6 +41,9 @@ CREATE INDEX records_pair_id_idx
 
 COMMENT ON TABLE  public.records IS 'お酒・おつまみの記録';
 COMMENT ON COLUMN public.records.pair_id IS '同時に記録したお酒とおつまみを紐付ける共通ID';
+COMMENT ON COLUMN public.records.producer IS '蔵元・メーカー名（主にお酒）';
+COMMENT ON COLUMN public.records.sub_info IS 'スタイル、生産地、ビールスタイル、料理のジャンル等の補助情報';
+COMMENT ON COLUMN public.records.place IS '飲食した場所（店名・自宅 など）';
 COMMENT ON COLUMN public.records.flavor_metrics IS 'カテゴリ別の評価軸（例: {"sweetness": 4, "acidity": 3}）';
 
 ALTER TABLE public.records ENABLE ROW LEVEL SECURITY;

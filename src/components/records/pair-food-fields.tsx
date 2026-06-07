@@ -34,7 +34,7 @@ export function PairFoodFields({
         nameLabel="おつまみの名前"
         namePlaceholder="枝豆、焼き鳥 など"
         subInfoLabel="補助情報"
-        subInfoPlaceholder="ジャンル、店名 など"
+        subInfoPlaceholder="ジャンル、調理法 など"
       />
     </div>
   );

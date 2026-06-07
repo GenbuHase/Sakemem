@@ -14,7 +14,9 @@ function makeRecord(
     pair_id: null,
     created_at: "2026-01-01T12:00:00Z",
     date: "2026-01-01",
+    producer: null,
     sub_info: null,
+    place: null,
     rating: null,
     flavor_metrics: {},
     comment: null,
@@ -27,7 +29,7 @@ const records: SakememRecord[] = [
     id: "1",
     category: "japanese-sake",
     name: "獺祭",
-    sub_info: "旭酒造",
+    producer: "旭酒造",
     pair_id: "pair-1",
   }),
   makeRecord({
@@ -78,7 +80,7 @@ describe("hasActiveFilters", () => {
 });
 
 describe("filterRecords", () => {
-  it("filters by keyword across name, sub_info, and comment", () => {
+  it("filters by keyword across name, producer, sub_info, place, and comment", () => {
     expect(filterRecords(records, { query: "旭酒造" })).toHaveLength(1);
     expect(filterRecords(records, { query: "定番" })).toHaveLength(1);
   });
