@@ -8,19 +8,19 @@ export default async function Home() {
   } = await supabase.auth.getUser();
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-6 py-24">
+    <div className="flex flex-1 flex-col items-center justify-center px-4 py-20 sm:px-6 sm:py-24">
       <main className="w-full max-w-md text-center">
         <p className="text-sm font-medium tracking-widest text-zinc-500 uppercase">
           Sakemem
         </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900">
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-zinc-900 sm:text-4xl">
           晩酌の記録を、ミニマルに。
         </h1>
         <p className="mt-4 text-base leading-7 text-zinc-600">
           お酒とおつまみをペアで記録し、あとから振り返るライフログアプリです。
         </p>
 
-        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center">
           {user ? (
             <>
               <LinkButton href="/records" size="lg">

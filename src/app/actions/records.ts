@@ -87,7 +87,7 @@ export async function createRecords(
 
   const date = parseString(formData, "date");
   const rawCategory = parseString(formData, "category");
-  const name = parseString(formData, "name");
+  const name = parseString(formData, "record_name");
 
   if (!date || !rawCategory || !name) {
     return { error: "日付、カテゴリ、名前は必須です。" };
@@ -161,7 +161,7 @@ export async function updateRecord(
   const id = parseString(formData, "id");
   const date = parseString(formData, "date");
   const rawCategory = parseString(formData, "category");
-  const name = parseString(formData, "name");
+  const name = parseString(formData, "record_name");
 
   if (!id || !date || !rawCategory || !name) {
     return { error: "必須項目を入力してください。" };

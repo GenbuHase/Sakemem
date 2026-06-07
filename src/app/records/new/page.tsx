@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { RecordForm } from "@/components/records/record-form";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/require-user";
 
 export const metadata: Metadata = {
@@ -11,21 +11,13 @@ export default async function NewRecordPage() {
   await requireUser();
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-10">
-      <div className="mb-8">
-        <Link
-          href="/records"
-          className="text-sm font-medium text-zinc-500 transition hover:text-zinc-900"
-        >
-          ← タイムラインに戻る
-        </Link>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
-          記録する
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          カテゴリでお酒とおつまみを切り替えられます。お酒を選んだときは、おつまみの同時記録もできます。
-        </p>
-      </div>
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+      <PageHeader
+        backHref="/records"
+        backLabel="タイムラインに戻る"
+        title="記録する"
+        description="カテゴリでお酒とおつまみを切り替えられます。お酒を選んだときは、おつまみの同時記録もできます。"
+      />
 
       <RecordForm />
     </div>

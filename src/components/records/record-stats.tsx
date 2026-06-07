@@ -1,4 +1,5 @@
 import type { RecordAnalysis } from "@/lib/records/analyze-records";
+import { SectionCard } from "@/components/ui/section-card";
 
 type RecordStatsProps = {
   analysis: RecordAnalysis;
@@ -10,38 +11,16 @@ export function RecordStats({ analysis }: RecordStatsProps) {
   }
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-white p-5">
-      <h2 className="text-lg font-semibold text-zinc-900">分析</h2>
-
-      <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-lg bg-zinc-50 px-3 py-2">
-          <dt className="text-xs text-zinc-500">記録数</dt>
-          <dd className="mt-0.5 text-xl font-semibold text-zinc-900">
-            {analysis.total}
-          </dd>
-        </div>
-        <div className="rounded-lg bg-zinc-50 px-3 py-2">
-          <dt className="text-xs text-zinc-500">お酒</dt>
-          <dd className="mt-0.5 text-xl font-semibold text-zinc-900">
-            {analysis.drinkCount}
-          </dd>
-        </div>
-        <div className="rounded-lg bg-zinc-50 px-3 py-2">
-          <dt className="text-xs text-zinc-500">おつまみ</dt>
-          <dd className="mt-0.5 text-xl font-semibold text-zinc-900">
-            {analysis.foodCount}
-          </dd>
-        </div>
-        <div className="rounded-lg bg-zinc-50 px-3 py-2">
-          <dt className="text-xs text-zinc-500">ペア記録</dt>
-          <dd className="mt-0.5 text-xl font-semibold text-zinc-900">
-            {analysis.pairedSessionCount}
-          </dd>
-        </div>
+    <SectionCard title="分析">
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatItem label="記録数" value={analysis.total} />
+        <StatItem label="お酒" value={analysis.drinkCount} />
+        <StatItem label="おつまみ" value={analysis.foodCount} />
+        <StatItem label="ペア記録" value={analysis.pairedSessionCount} />
       </dl>
 
       {analysis.categoryStats.length > 0 ? (
-        <div className="mt-5">
+        <div className="mt-5 border-t border-zinc-100 pt-5">
           <h3 className="text-sm font-medium text-zinc-700">カテゴリ別</h3>
           <ul className="mt-2 space-y-2">
             {analysis.categoryStats.map((stat) => (
@@ -50,7 +29,7 @@ export function RecordStats({ analysis }: RecordStatsProps) {
                 className="flex items-center justify-between gap-3 text-sm"
               >
                 <span className="text-zinc-700">{stat.label}</span>
-                <span className="text-zinc-500">
+                <span className="shrink-0 text-zinc-500">
                   {stat.count}件
                   {stat.avgRating !== null
                     ? ` · 平均 ${stat.avgRating}`
@@ -63,7 +42,7 @@ export function RecordStats({ analysis }: RecordStatsProps) {
       ) : null}
 
       {analysis.topRated.length > 0 ? (
-        <div className="mt-5">
+        <div className="mt-5 border-t border-zinc-100 pt-5">
           <h3 className="text-sm font-medium text-zinc-700">高評価トップ5</h3>
           <ul className="mt-2 space-y-2">
             {analysis.topRated.map((item) => (
@@ -71,11 +50,11 @@ export function RecordStats({ analysis }: RecordStatsProps) {
                 key={item.id}
                 className="flex items-center justify-between gap-3 text-sm"
               >
-                <span className="truncate text-zinc-700">
+                <span className="min-w-0 truncate text-zinc-700">
                   {item.name}
                   <span className="ml-2 text-zinc-400">{item.label}</span>
                 </span>
-                <span className="shrink-0 font-medium text-zinc-900">
+                <span className="shrink-0 font-medium text-amber-600">
                   ★{item.rating}
                 </span>
               </li>
@@ -83,6 +62,17 @@ export function RecordStats({ analysis }: RecordStatsProps) {
           </ul>
         </div>
       ) : null}
-    </section>
+    </SectionCard>
+  );
+}
+
+function StatItem({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg bg-zinc-50 px-3 py-2.5">
+      <dt className="text-xs text-zinc-500">{label}</dt>
+      <dd className="mt-0.5 text-xl font-semibold tabular-nums text-zinc-900">
+        {value}
+      </dd>
+    </div>
   );
 }

@@ -1,21 +1,24 @@
 import type { ReactNode } from "react";
-import { FIELD_LABEL_CLASS } from "./styles";
 
 type FieldProps = {
   htmlFor?: string;
   label: ReactNode;
   children: ReactNode;
   hint?: ReactNode;
+  required?: boolean;
 };
 
-export function Field({ htmlFor, label, children, hint }: FieldProps) {
+export function Field({ htmlFor, label, children, hint, required }: FieldProps) {
   return (
     <div>
-      <label htmlFor={htmlFor} className={FIELD_LABEL_CLASS}>
+      <label htmlFor={htmlFor} className="mb-1.5 block text-sm font-medium text-zinc-700">
         {label}
+        {required ? (
+          <span className="ml-1 text-xs font-normal text-zinc-400">必須</span>
+        ) : null}
       </label>
       {children}
-      {hint ? <p className="mt-1 text-xs text-zinc-500">{hint}</p> : null}
+      {hint ? <p className="mt-1.5 text-xs leading-relaxed text-zinc-500">{hint}</p> : null}
     </div>
   );
 }

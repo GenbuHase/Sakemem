@@ -21,7 +21,7 @@ export function PairFoodFields({
           おつまみ {index + 1}
         </h4>
         {onRemove ? (
-          <Button variant="ghost" size="sm" onClick={onRemove}>
+          <Button type="button" variant="ghost" size="sm" onClick={onRemove}>
             削除
           </Button>
         ) : null}

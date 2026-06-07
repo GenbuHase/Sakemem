@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Select } from "@/components/ui/inputs";
+import { SectionCard } from "@/components/ui/section-card";
 import { getCategoryLabel } from "@/lib/constants/categories";
 import type { SakememRecord } from "@/lib/types/record";
 import { formatRecordDate } from "@/lib/utils/date";
@@ -45,13 +46,12 @@ export function RecordPairingSection({
     (unlinkState && !unlinkState.error) || (linkState && !linkState.error);
 
   return (
-    <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
-      <h2 className="text-lg font-semibold text-zinc-900">ペアリング</h2>
-      <p className="mt-1 text-sm text-zinc-500">
-        お酒とおつまみを後からペアにしたり、複数の記録をまとめてペアにできます。
-      </p>
-
-      <div className="mt-4 space-y-4">
+    <SectionCard
+      variant="muted"
+      title="ペアリング"
+      description="お酒とおつまみを後からペアにしたり、複数の記録をまとめてペアにできます。"
+    >
+      <div className="space-y-4">
         <PartnersList
           partners={partners}
           recordId={record.id}
@@ -69,17 +69,17 @@ export function RecordPairingSection({
       </div>
 
       {lastError ? (
-        <FormMessage variant="error" className="mt-3">
+        <FormMessage variant="error" className="mt-4">
           {lastError}
         </FormMessage>
       ) : null}
 
       {!lastError && lastSuccess ? (
-        <FormMessage variant="success" className="mt-3">
+        <FormMessage variant="success" className="mt-4">
           ペアリングを更新しました。
         </FormMessage>
       ) : null}
-    </section>
+    </SectionCard>
   );
 }
 
@@ -109,7 +109,7 @@ function PartnersList({
         {partners.map((partner) => (
           <li
             key={partner.id}
-            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700"
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700"
           >
             {formatCandidateLabel(partner)}
           </li>
@@ -118,7 +118,7 @@ function PartnersList({
 
       <form action={formAction}>
         <input type="hidden" name="id" value={recordId} />
-        <Button type="submit" variant="secondary" disabled={pending}>
+        <Button type="submit" variant="secondary" size="sm" disabled={pending}>
           {pending ? "処理中..." : "この記録をペアから外す"}
         </Button>
       </form>
@@ -154,7 +154,7 @@ function LinkForm({
   const buttonText = partnersExist ? "ペアに追加" : "ペアにする";
 
   return (
-    <form action={formAction} className="space-y-3">
+    <form action={formAction} className="space-y-3 border-t border-zinc-200 pt-4">
       <input type="hidden" name="id" value={recordId} />
 
       <Select

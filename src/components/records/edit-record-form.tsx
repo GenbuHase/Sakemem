@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Select, TextInput } from "@/components/ui/inputs";
+import { SectionCard } from "@/components/ui/section-card";
 import {
   CATEGORY_LABELS,
   DRINK_CATEGORIES,
@@ -38,52 +39,60 @@ export function EditRecordForm({ record }: EditRecordFormProps) {
     <form action={formAction} className="space-y-6">
       <input type="hidden" name="id" value={record.id} />
 
-      <TextInput
-        id="date"
-        name="date"
-        type="date"
-        label="日付"
-        required
-        defaultValue={record.date}
-      />
+      <SectionCard title="基本情報">
+        <TextInput
+          id="date"
+          name="date"
+          type="date"
+          label="日付"
+          required
+          defaultValue={record.date}
+        />
+      </SectionCard>
 
-      {/*
-        おつまみカテゴリの編集ではカテゴリ変更不可。
-        disabled な select は送信されないため、hidden で値を保持する。
-      */}
-      {isFood ? <input type="hidden" name="category" value="food" /> : null}
-      <Select
-        id="category"
-        name={isFood ? undefined : "category"}
-        label="カテゴリ"
-        required
-        value={category}
-        onChange={(event) => setCategory(event.target.value as RecordCategory)}
-        disabled={isFood}
-      >
-        {categoryOptions.map((value) => (
-          <option key={value} value={value}>
-            {CATEGORY_LABELS[value]}
-          </option>
-        ))}
-      </Select>
+      <SectionCard title="記録">
+        <div className="space-y-4">
+          {/*
+            おつまみカテゴリの編集ではカテゴリ変更不可。
+            disabled な select は送信されないため、hidden で値を保持する。
+          */}
+          {isFood ? <input type="hidden" name="category" value="food" /> : null}
+          <Select
+            id="category"
+            name={isFood ? undefined : "category"}
+            label="カテゴリ"
+            required
+            value={category}
+            onChange={(event) =>
+              setCategory(event.target.value as RecordCategory)
+            }
+            disabled={isFood}
+          >
+            {categoryOptions.map((value) => (
+              <option key={value} value={value}>
+                {CATEGORY_LABELS[value]}
+              </option>
+            ))}
+          </Select>
 
-      <RecordCoreFields
-        key={category}
-        prefix="record"
-        category={category}
-        enableSakeSuggest={category === "japanese-sake"}
-        nameLabel={isFood ? "おつまみの名前" : "名前"}
-        namePlaceholder={isFood ? "枝豆、焼き鳥 など" : "銘柄名・商品名"}
-        subInfoPlaceholder={
-          isFood ? "ジャンル、店名 など" : "蔵元、スタイル、生産地 など"
-        }
-        defaultName={record.name}
-        defaultSubInfo={record.sub_info ?? ""}
-        defaultRating={record.rating}
-        defaultComment={record.comment ?? ""}
-        defaultFlavorMetrics={record.flavor_metrics}
-      />
+          <RecordCoreFields
+            key={category}
+            prefix="record"
+            category={category}
+            enableSakeSuggest={category === "japanese-sake"}
+            nameLabel={isFood ? "おつまみの名前" : "名前"}
+            namePlaceholder={isFood ? "枝豆、焼き鳥 など" : "銘柄名・商品名"}
+            subInfoPlaceholder={
+              isFood ? "ジャンル、店名 など" : "蔵元、スタイル、生産地 など"
+            }
+            defaultName={record.name}
+            defaultSubInfo={record.sub_info ?? ""}
+            defaultRating={record.rating}
+            defaultComment={record.comment ?? ""}
+            defaultFlavorMetrics={record.flavor_metrics}
+          />
+        </div>
+      </SectionCard>
 
       {state?.error ? (
         <FormMessage variant="error">{state.error}</FormMessage>

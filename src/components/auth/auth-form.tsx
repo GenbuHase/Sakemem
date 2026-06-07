@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { TextInput } from "@/components/ui/inputs";
+import { SectionCard } from "@/components/ui/section-card";
 
 type AuthFormProps = {
   mode: "login" | "signup";
@@ -43,7 +44,7 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
 
   return (
     <div className="w-full max-w-sm">
-      <div className="mb-8 text-center">
+      <div className="mb-6 text-center">
         <p className="text-sm font-medium tracking-widest text-zinc-500 uppercase">
           Sakemem
         </p>
@@ -52,44 +53,46 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
         </h1>
       </div>
 
-      <form action={formAction} className="space-y-4">
-        {mode === "login" && nextPath ? (
-          <input type="hidden" name="next" value={nextPath} />
-        ) : null}
+      <SectionCard>
+        <form action={formAction} className="space-y-4">
+          {mode === "login" && nextPath ? (
+            <input type="hidden" name="next" value={nextPath} />
+          ) : null}
 
-        <TextInput
-          id="email"
-          name="email"
-          type="email"
-          label="メールアドレス"
-          autoComplete="email"
-          required
-          placeholder="you@example.com"
-        />
+          <TextInput
+            id="email"
+            name="email"
+            type="email"
+            label="メールアドレス"
+            autoComplete="email"
+            required
+            placeholder="you@example.com"
+          />
 
-        <TextInput
-          id="password"
-          name="password"
-          type="password"
-          label="パスワード"
-          autoComplete={config.passwordAutoComplete}
-          required
-          minLength={6}
-          placeholder="6文字以上"
-        />
+          <TextInput
+            id="password"
+            name="password"
+            type="password"
+            label="パスワード"
+            autoComplete={config.passwordAutoComplete}
+            required
+            minLength={6}
+            placeholder="6文字以上"
+          />
 
-        {state?.error ? (
-          <FormMessage variant="error">{state.error}</FormMessage>
-        ) : null}
+          {state?.error ? (
+            <FormMessage variant="error">{state.error}</FormMessage>
+          ) : null}
 
-        {state?.success ? (
-          <FormMessage variant="success">{state.success}</FormMessage>
-        ) : null}
+          {state?.success ? (
+            <FormMessage variant="success">{state.success}</FormMessage>
+          ) : null}
 
-        <Button type="submit" fullWidth disabled={pending}>
-          {pending ? "処理中..." : config.submitLabel}
-        </Button>
-      </form>
+          <Button type="submit" fullWidth disabled={pending}>
+            {pending ? "処理中..." : config.submitLabel}
+          </Button>
+        </form>
+      </SectionCard>
 
       <p className="mt-6 text-center text-sm text-zinc-600">
         <Link

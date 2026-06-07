@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Select, TextInput } from "@/components/ui/inputs";
+import { SectionCard } from "@/components/ui/section-card";
 import {
   CATEGORY_LABELS,
   isFoodCategory,
@@ -31,24 +32,20 @@ export function RecordForm() {
   const isFood = isFoodCategory(category);
 
   return (
-    <form action={formAction} className="space-y-8">
-      <section className="rounded-xl border border-zinc-200 bg-white p-5">
-        <h2 className="text-lg font-semibold text-zinc-900">基本情報</h2>
-        <div className="mt-4">
-          <TextInput
-            id="date"
-            name="date"
-            type="date"
-            label="日付"
-            required
-            defaultValue={getTodayDateString()}
-          />
-        </div>
-      </section>
+    <form action={formAction} className="space-y-6">
+      <SectionCard title="基本情報">
+        <TextInput
+          id="date"
+          name="date"
+          type="date"
+          label="日付"
+          required
+          defaultValue={getTodayDateString()}
+        />
+      </SectionCard>
 
-      <section className="rounded-xl border border-zinc-200 bg-white p-5">
-        <h2 className="text-lg font-semibold text-zinc-900">記録</h2>
-        <div className="mt-4 space-y-4">
+      <SectionCard title="記録">
+        <div className="space-y-4">
           <Select
             id="category"
             name="category"
@@ -90,7 +87,7 @@ export function RecordForm() {
             />
           ) : null}
         </div>
-      </section>
+      </SectionCard>
 
       {state?.error ? (
         <FormMessage variant="error">{state.error}</FormMessage>
@@ -119,27 +116,28 @@ function PairFoodSection({
   onDecrementCount,
 }: PairFoodSectionProps) {
   return (
-    <div className="border-t border-zinc-200 pt-4">
-      <label className="flex items-center gap-3">
+    <div className="border-t border-zinc-100 pt-4">
+      <label className="flex cursor-pointer items-start gap-3 rounded-lg p-2 transition hover:bg-zinc-50">
         <input
           type="checkbox"
           name="include_pair_food"
           checked={includePairFood}
           onChange={(event) => onTogglePair(event.target.checked)}
-          className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
+          className="mt-0.5 h-4 w-4 rounded border-zinc-300 accent-zinc-900"
         />
-        <span className="text-sm font-medium text-zinc-900">
-          おつまみも同時に記録する（ペア）
+        <span>
+          <span className="block text-sm font-medium text-zinc-900">
+            おつまみも同時に記録する（ペア）
+          </span>
+          <span className="mt-0.5 block text-xs text-zinc-500">
+            同じ日のお酒とおつまみをまとめて記録できます
+          </span>
         </span>
       </label>
 
       {includePairFood ? (
-        <div className="mt-4 space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-          <input
-            type="hidden"
-            name="pair_food_count"
-            value={pairFoodCount}
-          />
+        <div className="mt-3 space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+          <input type="hidden" name="pair_food_count" value={pairFoodCount} />
           <div className="space-y-3">
             {Array.from({ length: pairFoodCount }, (_, index) => (
               <PairFoodFields
@@ -154,7 +152,7 @@ function PairFoodSection({
               />
             ))}
           </div>
-          <Button variant="ghost" size="sm" onClick={onIncrementCount}>
+          <Button type="button" variant="ghost" size="sm" onClick={onIncrementCount}>
             + おつまみを追加
           </Button>
         </div>

@@ -36,7 +36,7 @@ export function TextInput({
   }
 
   return (
-    <Field htmlFor={id} label={label} hint={hint}>
+    <Field htmlFor={id} label={label} hint={hint} required={props.required}>
       {input}
     </Field>
   );
@@ -66,7 +66,7 @@ export function TextArea({
   }
 
   return (
-    <Field htmlFor={id} label={label} hint={hint}>
+    <Field htmlFor={id} label={label} hint={hint} required={props.required}>
       {textarea}
     </Field>
   );
@@ -99,7 +99,7 @@ export function Select({
   }
 
   return (
-    <Field htmlFor={id} label={label} hint={hint}>
+    <Field htmlFor={id} label={label} hint={hint} required={props.required}>
       {select}
     </Field>
   );

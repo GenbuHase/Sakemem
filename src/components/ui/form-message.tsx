@@ -8,8 +8,8 @@ type FormMessageProps = {
 };
 
 const VARIANT_CLASS = {
-  error: "bg-red-50 text-red-700",
-  success: "bg-emerald-50 text-emerald-700",
+  error: "border border-red-200 bg-red-50 text-red-700",
+  success: "border border-emerald-200 bg-emerald-50 text-emerald-700",
 } as const;
 
 export function FormMessage({
@@ -19,8 +19,9 @@ export function FormMessage({
 }: FormMessageProps) {
   return (
     <p
+      role="alert"
       className={cx(
-        "rounded-lg px-3 py-2 text-sm",
+        "rounded-lg px-3 py-2.5 text-sm leading-relaxed",
         VARIANT_CLASS[variant],
         className,
       )}

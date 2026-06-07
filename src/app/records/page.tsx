@@ -4,6 +4,7 @@ import { RecordFiltersForm } from "@/components/records/record-filters";
 import { RecordStats } from "@/components/records/record-stats";
 import { Timeline } from "@/components/records/timeline";
 import { LinkButton } from "@/components/ui/button";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/require-user";
 import { analyzeRecords } from "@/lib/records/analyze-records";
 import {
@@ -31,24 +32,16 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
   const isFiltered = hasActiveFilters(filters);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-10">
-      <div className="mb-8 flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            タイムライン
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            過去の晩酌記録を振り返れます。
-          </p>
-        </div>
-        <LinkButton href="/records/new" className="shrink-0">
-          記録する
-        </LinkButton>
-      </div>
+    <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
+      <PageHeader
+        title="タイムライン"
+        description="過去の晩酌記録を振り返れます。"
+        action={<LinkButton href="/records/new">記録する</LinkButton>}
+      />
 
       <div className="space-y-6">
         <RecordFiltersForm filters={filters} />
-        <RecordStats analysis={analysis} />
+        {!isFiltered ? <RecordStats analysis={analysis} /> : null}
 
         {isFiltered ? (
           <p className="text-sm text-zinc-500">

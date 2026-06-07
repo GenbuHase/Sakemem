@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getRecordPairingContext } from "@/app/actions/records";
 import { EditRecordForm } from "@/components/records/edit-record-form";
 import { RecordPairingSection } from "@/components/records/record-pairing-section";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth/require-user";
 
 type EditRecordPageProps = {
@@ -26,23 +26,15 @@ export default async function EditRecordPage({ params }: EditRecordPageProps) {
   const { record, partners, linkCandidates } = pairingContext;
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-10">
-      <div className="mb-8">
-        <Link
-          href="/records"
-          className="text-sm font-medium text-zinc-500 transition hover:text-zinc-900"
-        >
-          ← タイムラインに戻る
-        </Link>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
-          記録を編集
-        </h1>
-      </div>
+    <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
+      <PageHeader
+        backHref="/records"
+        backLabel="タイムラインに戻る"
+        title="記録を編集"
+      />
 
       <div className="space-y-6">
-        <div className="rounded-xl border border-zinc-200 bg-white p-5">
-          <EditRecordForm record={record} />
-        </div>
+        <EditRecordForm record={record} />
 
         <RecordPairingSection
           record={record}
