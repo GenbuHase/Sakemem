@@ -360,12 +360,24 @@ export async function deleteRecord(id: string): Promise<void> {
     throw new Error("記録が見つかりません。");
   }
 
-  const { error } = record.pair_id
-    ? await supabase.from("records").delete().eq("pair_id", record.pair_id)
-    : await supabase.from("records").delete().eq("id", id);
+  const previousPairId = record.pair_id;
+
+  const { error } = await supabase.from("records").delete().eq("id", id);
 
   if (error) {
     throw new Error("記録の削除に失敗しました。");
+  }
+
+  if (previousPairId) {
+    try {
+      await clearOrphanedPair(supabase, previousPairId);
+    } catch (pairError) {
+      throw new Error(
+        pairError instanceof Error
+          ? pairError.message
+          : "ペアの解除に失敗しました。",
+      );
+    }
   }
 
   revalidatePath("/records");

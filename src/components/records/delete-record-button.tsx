@@ -17,7 +17,7 @@ export function DeleteRecordButton({
   const [isPending, startTransition] = useTransition();
 
   const confirmMessage = pairId
-    ? "この記録はお酒とおつまみのペアです。両方とも削除します。よろしいですか？"
+    ? "この記録を削除しますか？ペアの相手の記録は残ります。"
     : "この記録を削除しますか？";
 
   return (
