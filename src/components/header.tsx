@@ -23,10 +23,7 @@ export async function Header() {
           aria-label="メインナビゲーション"
           className="flex shrink-0 items-center text-sm"
         >
-          <HeaderNav
-            user={user ? { email: user.email ?? "" } : null}
-            signOutAction={signOut}
-          />
+          <HeaderNav isLoggedIn={!!user} signOutAction={signOut} />
         </nav>
       </div>
     </header>

@@ -13,7 +13,7 @@ const MOBILE_NAV_LINK_CLASS =
   "block rounded-lg px-3 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300";
 
 type HeaderNavProps = {
-  user: { email: string } | null;
+  isLoggedIn: boolean;
   signOutAction: () => Promise<void>;
 };
 
@@ -22,7 +22,7 @@ type MenuState = {
   pathname: string;
 };
 
-export function HeaderNav({ user, signOutAction }: HeaderNavProps) {
+export function HeaderNav({ isLoggedIn, signOutAction }: HeaderNavProps) {
   const pathname = usePathname();
   const [menuState, setMenuState] = useState<MenuState>({
     open: false,
@@ -54,7 +54,7 @@ export function HeaderNav({ user, signOutAction }: HeaderNavProps) {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [menuOpen, pathname]);
 
-  if (!user) {
+  if (!isLoggedIn) {
     return (
       <>
         <div className="hidden items-center gap-1.5 sm:flex sm:gap-2">
@@ -97,12 +97,6 @@ export function HeaderNav({ user, signOutAction }: HeaderNavProps) {
         <LinkButton href="/records/new" size="sm" className="whitespace-nowrap">
           記録する
         </LinkButton>
-        <span
-          className="max-w-[10rem] truncate text-zinc-500"
-          title={user.email}
-        >
-          {user.email}
-        </span>
         <form action={signOutAction}>
           <button
             type="submit"
@@ -137,9 +131,6 @@ export function HeaderNav({ user, signOutAction }: HeaderNavProps) {
         >
           記録する
         </LinkButton>
-        <p className="truncate px-3 py-1 text-xs text-zinc-500" title={user.email}>
-          {user.email}
-        </p>
         <form action={signOutAction}>
           <button
             type="submit"
