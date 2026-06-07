@@ -38,7 +38,7 @@ export function RecordDetail({ record, showActions = true }: RecordDetailProps) 
             >
               編集
             </Link>
-            <DeleteRecordButton id={record.id} />
+            <DeleteRecordButton id={record.id} pairId={record.pair_id} />
           </div>
         ) : null}
       </div>

@@ -4,15 +4,22 @@ import { RecordDetail } from "./record-detail";
 
 type TimelineProps = {
   entries: TimelineEntry[];
+  filtered?: boolean;
 };
 
-export function Timeline({ entries }: TimelineProps) {
+export function Timeline({ entries, filtered = false }: TimelineProps) {
   if (entries.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-12 text-center">
-        <p className="text-sm text-zinc-500">まだ記録がありません。</p>
+        <p className="text-sm text-zinc-500">
+          {filtered
+            ? "条件に一致する記録がありません。"
+            : "まだ記録がありません。"}
+        </p>
         <p className="mt-1 text-sm text-zinc-400">
-          最初の晩酌を記録してみましょう。
+          {filtered
+            ? "検索条件を変えてお試しください。"
+            : "最初の晩酌を記録してみましょう。"}
         </p>
       </div>
     );

@@ -175,7 +175,23 @@ export async function updateRecord(
 export async function deleteRecord(id: string): Promise<void> {
   const { supabase } = await requireUser();
 
-  const { error } = await supabase.from("records").delete().eq("id", id);
+  const { data: record, error: fetchError } = await supabase
+    .from("records")
+    .select("pair_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (fetchError) {
+    throw new Error("記録の取得に失敗しました。");
+  }
+
+  if (!record) {
+    throw new Error("記録が見つかりません。");
+  }
+
+  const { error } = record.pair_id
+    ? await supabase.from("records").delete().eq("pair_id", record.pair_id)
+    : await supabase.from("records").delete().eq("id", id);
 
   if (error) {
     throw new Error("記録の削除に失敗しました。");

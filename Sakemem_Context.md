@@ -53,12 +53,19 @@
 | `food` | おつまみ・食べ物 | 枝豆、焼き鳥、チーズ 等 |
 | `other` | その他 | 上記に当てはまらない酒類 |
 
-## 5. 開発ロードマップ & Cursorへの指示
-以下のステップで順次実装を行う。まずは **Step 1** から着手する。
+## 5. 開発ロードマップ
 
-- **Step 1 [現在のタスク]:**
-  - Supabase SQL Editor で `records` テーブルの作成と RLS ポリシー (`Enable insert/select/update/delete for users based on user_id`) の設定。
-  - Next.js プロジェクトの初期化と、Supabase環境変数 (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) の設定。
-- **Step 2:** Supabase Auth（ログイン画面）の統合。
-- **Step 3:** お酒とおつまみの記録フォーム（UI）およびタイムライン一覧の作成（SupabaseとのCRUD連携）。
-- **Step 4:** さけのわAPIと連携した日本酒サジェスト機能の追加。
+| Step | 内容 | 状態 |
+| :--- | :--- | :--- |
+| Step 1 | `records` テーブル + RLS、Next.js 初期化、Supabase 環境変数 | ✅ 完了 |
+| Step 2 | Supabase Auth（ログイン / 新規登録） | ✅ 完了 |
+| Step 3 | 記録フォーム、タイムライン、CRUD | ✅ 完了 |
+| Step 4 | さけのわ API 連携（日本酒サジェスト） | ✅ 完了 |
+| Step 5 | 検索・フィルタ・分析 UI | ✅ 完了 |
+| Step 6 | ペア削除の整合性、テスト、CI、デプロイ手順 | ✅ 完了 |
+
+### 関連ファイル
+
+- マイグレーション: `supabase/migrations/001_create_records.sql`
+- 環境変数テンプレート: `.env.example`
+- セットアップ・デプロイ手順: `README.md`
