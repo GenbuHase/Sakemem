@@ -52,6 +52,5 @@ describe("analyzeRecords", () => {
     expect(analysis.foodCount).toBe(1);
     expect(analysis.pairedSessionCount).toBe(1);
     expect(analysis.categoryStats).toHaveLength(3);
-    expect(analysis.topRated[0]?.name).toBe("獺祭");
   });
 });

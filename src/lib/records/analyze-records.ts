@@ -11,21 +11,12 @@ export type CategoryStat = {
   avgRating: number | null;
 };
 
-export type TopRatedItem = {
-  id: string;
-  name: string;
-  category: RecordCategory;
-  label: string;
-  rating: number;
-};
-
 export type RecordAnalysis = {
   total: number;
   drinkCount: number;
   foodCount: number;
   pairedSessionCount: number;
   categoryStats: CategoryStat[];
-  topRated: TopRatedItem[];
 };
 
 function averageRating(records: SakememRecord[]): number | null {
@@ -71,26 +62,11 @@ export function analyzeRecords(records: SakememRecord[]): RecordAnalysis {
     }))
     .sort((a, b) => b.count - a.count);
 
-  const topRated = records
-    .filter((record): record is SakememRecord & { rating: number } =>
-      record.rating !== null,
-    )
-    .sort((a, b) => b.rating - a.rating || a.name.localeCompare(b.name, "ja"))
-    .slice(0, 5)
-    .map((record) => ({
-      id: record.id,
-      name: record.name,
-      category: record.category,
-      label: getCategoryLabel(record.category),
-      rating: record.rating,
-    }));
-
   return {
     total: records.length,
     drinkCount,
     foodCount,
     pairedSessionCount: pairIds.size,
     categoryStats,
-    topRated,
   };
 }

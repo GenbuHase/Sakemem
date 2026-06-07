@@ -40,28 +40,6 @@ export function RecordStats({ analysis }: RecordStatsProps) {
           </ul>
         </div>
       ) : null}
-
-      {analysis.topRated.length > 0 ? (
-        <div className="mt-5 border-t border-zinc-100 pt-5">
-          <h3 className="text-sm font-medium text-zinc-700">高評価トップ5</h3>
-          <ul className="mt-2 space-y-2">
-            {analysis.topRated.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-center justify-between gap-3 text-sm"
-              >
-                <span className="min-w-0 truncate text-zinc-700">
-                  {item.name}
-                  <span className="ml-2 text-zinc-400">{item.label}</span>
-                </span>
-                <span className="shrink-0 font-medium text-amber-600">
-                  ★{item.rating}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </SectionCard>
   );
 }
