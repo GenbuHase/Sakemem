@@ -1,3 +1,4 @@
+import { Select } from "@/components/ui/inputs";
 import { FLAVOR_METRICS_BY_CATEGORY } from "@/lib/constants/flavor-metrics";
 import type { FlavorMetrics, RecordCategory } from "@/lib/types/record";
 
@@ -6,6 +7,8 @@ type FlavorMetricsInputProps = {
   category: RecordCategory;
   defaultValues?: FlavorMetrics;
 };
+
+const RATING_VALUES = [1, 2, 3, 4, 5] as const;
 
 export function FlavorMetricsInput({
   prefix,
@@ -25,18 +28,17 @@ export function FlavorMetricsInput({
         {metrics.map(({ key, label }) => (
           <label key={key} className="block text-sm">
             <span className="mb-1.5 block text-zinc-600">{label}</span>
-            <select
+            <Select
               name={`${prefix}_flavor_${key}`}
               defaultValue={defaultValues[key]?.toString() ?? ""}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
             >
               <option value="">未評価</option>
-              {[1, 2, 3, 4, 5].map((value) => (
+              {RATING_VALUES.map((value) => (
                 <option key={value} value={value}>
                   {value}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         ))}
       </div>

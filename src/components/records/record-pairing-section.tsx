@@ -2,9 +2,13 @@
 
 import { useActionState } from "react";
 import {
-  updateRecordPairing,
+  linkRecordPair,
+  unlinkRecordPair,
   type RecordActionState,
 } from "@/app/actions/records";
+import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
+import { Select } from "@/components/ui/inputs";
 import { getCategoryLabel } from "@/lib/constants/categories";
 import type { SakememRecord } from "@/lib/types/record";
 import { formatRecordDate } from "@/lib/utils/date";
@@ -26,10 +30,19 @@ export function RecordPairingSection({
   partners,
   linkCandidates,
 }: RecordPairingSectionProps) {
-  const [state, formAction, pending] = useActionState(
-    updateRecordPairing,
+  const [unlinkState, unlinkAction, unlinking] = useActionState(
+    unlinkRecordPair,
     initialState,
   );
+  const [linkState, linkAction, linking] = useActionState(
+    linkRecordPair,
+    initialState,
+  );
+
+  const pending = unlinking || linking;
+  const lastError = unlinkState?.error ?? linkState?.error;
+  const lastSuccess =
+    (unlinkState && !unlinkState.error) || (linkState && !linkState.error);
 
   return (
     <section className="rounded-xl border border-zinc-200 bg-zinc-50 p-5">
@@ -39,96 +52,131 @@ export function RecordPairingSection({
       </p>
 
       <div className="mt-4 space-y-4">
-        {partners.length > 0 ? (
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-zinc-700">現在のペア</p>
-            <ul className="space-y-2">
-              {partners.map((partner) => (
-                <li
-                  key={partner.id}
-                  className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700"
-                >
-                  {formatCandidateLabel(partner)}
-                </li>
-              ))}
-            </ul>
+        <PartnersList
+          partners={partners}
+          recordId={record.id}
+          formAction={unlinkAction}
+          pending={pending}
+        />
 
-            <form action={formAction}>
-              <input type="hidden" name="id" value={record.id} />
-              <input type="hidden" name="pairing_action" value="unlink" />
-              <button
-                type="submit"
-                disabled={pending}
-                className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {pending ? "処理中..." : "この記録をペアから外す"}
-              </button>
-            </form>
-          </div>
-        ) : (
-          <p className="text-sm text-zinc-600">現在はペアリングされていません。</p>
-        )}
-
-        {linkCandidates.length > 0 ? (
-          <form action={formAction} className="space-y-3">
-            <input type="hidden" name="id" value={record.id} />
-            <input type="hidden" name="pairing_action" value="link" />
-
-            <div>
-              <label
-                htmlFor="partner_id"
-                className="mb-1.5 block text-sm font-medium text-zinc-700"
-              >
-                {partners.length > 0 ? "ペアに追加する記録" : "ペアにする記録"}
-              </label>
-              <select
-                id="partner_id"
-                name="partner_id"
-                required
-                defaultValue=""
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-              >
-                <option value="" disabled>
-                  記録を選択
-                </option>
-                {linkCandidates.map((candidate) => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {formatCandidateLabel(candidate)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              type="submit"
-              disabled={pending}
-              className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {pending
-                ? "処理中..."
-                : partners.length > 0
-                  ? "ペアに追加"
-                  : "ペアにする"}
-            </button>
-          </form>
-        ) : partners.length === 0 ? (
-          <p className="text-sm text-zinc-500">
-            ペアにできる未ペアの記録がありません。
-          </p>
-        ) : null}
+        <LinkForm
+          partnersExist={partners.length > 0}
+          candidates={linkCandidates}
+          recordId={record.id}
+          formAction={linkAction}
+          pending={pending}
+        />
       </div>
 
-      {state?.error ? (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {state.error}
-        </p>
+      {lastError ? (
+        <FormMessage variant="error" className="mt-3">
+          {lastError}
+        </FormMessage>
       ) : null}
 
-      {state && !state.error ? (
-        <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+      {!lastError && lastSuccess ? (
+        <FormMessage variant="success" className="mt-3">
           ペアリングを更新しました。
-        </p>
+        </FormMessage>
       ) : null}
     </section>
+  );
+}
+
+type PartnersListProps = {
+  partners: SakememRecord[];
+  recordId: string;
+  formAction: (formData: FormData) => void;
+  pending: boolean;
+};
+
+function PartnersList({
+  partners,
+  recordId,
+  formAction,
+  pending,
+}: PartnersListProps) {
+  if (partners.length === 0) {
+    return (
+      <p className="text-sm text-zinc-600">現在はペアリングされていません。</p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-zinc-700">現在のペア</p>
+      <ul className="space-y-2">
+        {partners.map((partner) => (
+          <li
+            key={partner.id}
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-700"
+          >
+            {formatCandidateLabel(partner)}
+          </li>
+        ))}
+      </ul>
+
+      <form action={formAction}>
+        <input type="hidden" name="id" value={recordId} />
+        <Button type="submit" variant="secondary" disabled={pending}>
+          {pending ? "処理中..." : "この記録をペアから外す"}
+        </Button>
+      </form>
+    </div>
+  );
+}
+
+type LinkFormProps = {
+  partnersExist: boolean;
+  candidates: SakememRecord[];
+  recordId: string;
+  formAction: (formData: FormData) => void;
+  pending: boolean;
+};
+
+function LinkForm({
+  partnersExist,
+  candidates,
+  recordId,
+  formAction,
+  pending,
+}: LinkFormProps) {
+  if (candidates.length === 0) {
+    if (partnersExist) return null;
+    return (
+      <p className="text-sm text-zinc-500">
+        ペアにできる未ペアの記録がありません。
+      </p>
+    );
+  }
+
+  const labelText = partnersExist ? "ペアに追加する記録" : "ペアにする記録";
+  const buttonText = partnersExist ? "ペアに追加" : "ペアにする";
+
+  return (
+    <form action={formAction} className="space-y-3">
+      <input type="hidden" name="id" value={recordId} />
+
+      <Select
+        id="partner_id"
+        name="partner_id"
+        label={labelText}
+        required
+        defaultValue=""
+      >
+        <option value="" disabled>
+          記録を選択
+        </option>
+        {candidates.map((candidate) => (
+          <option key={candidate.id} value={candidate.id}>
+            {formatCandidateLabel(candidate)}
+          </option>
+        ))}
+      </Select>
+
+      <Button type="submit" disabled={pending}>
+        {pending ? "処理中..." : buttonText}
+      </Button>
+    </form>
   );
 }

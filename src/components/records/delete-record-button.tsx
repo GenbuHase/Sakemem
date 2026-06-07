@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { deleteRecord } from "@/app/actions/records";
+import { Button } from "@/components/ui/button";
 
 type DeleteRecordButtonProps = {
   id: string;
@@ -21,8 +22,9 @@ export function DeleteRecordButton({
     : "この記録を削除しますか？";
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="danger"
+      size="sm"
       disabled={isPending}
       onClick={() => {
         if (!window.confirm(confirmMessage)) return;
@@ -31,9 +33,8 @@ export function DeleteRecordButton({
           await deleteRecord(id);
         });
       }}
-      className="text-sm text-red-600 transition hover:text-red-700 disabled:opacity-50"
     >
       {isPending ? "削除中..." : label}
-    </button>
+    </Button>
   );
 }

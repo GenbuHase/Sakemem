@@ -7,6 +7,9 @@ import {
   signup,
   type AuthActionState,
 } from "@/app/actions/auth";
+import { Button } from "@/components/ui/button";
+import { FormMessage } from "@/components/ui/form-message";
+import { TextInput } from "@/components/ui/inputs";
 
 type AuthFormProps = {
   mode: "login" | "signup";
@@ -15,15 +18,28 @@ type AuthFormProps = {
 
 const initialState: AuthActionState | null = null;
 
+const MODE_CONFIG = {
+  login: {
+    title: "ログイン",
+    submitLabel: "ログイン",
+    alternateHref: "/signup",
+    alternateLabel: "アカウントをお持ちでない方はこちら",
+    passwordAutoComplete: "current-password" as const,
+  },
+  signup: {
+    title: "新規登録",
+    submitLabel: "登録する",
+    alternateHref: "/login",
+    alternateLabel: "すでにアカウントをお持ちの方はこちら",
+    passwordAutoComplete: "new-password" as const,
+  },
+};
+
 export function AuthForm({ mode, nextPath }: AuthFormProps) {
   const action = mode === "login" ? login : signup;
   const [state, formAction, pending] = useActionState(action, initialState);
 
-  const title = mode === "login" ? "ログイン" : "新規登録";
-  const submitLabel = mode === "login" ? "ログイン" : "登録する";
-  const alternateHref = mode === "login" ? "/signup" : "/login";
-  const alternateLabel =
-    mode === "login" ? "アカウントをお持ちでない方はこちら" : "すでにアカウントをお持ちの方はこちら";
+  const config = MODE_CONFIG[mode];
 
   return (
     <div className="w-full max-w-sm">
@@ -32,7 +48,7 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
           Sakemem
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-zinc-900">
-          {title}
+          {config.title}
         </h1>
       </div>
 
@@ -40,67 +56,47 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
         {mode === "login" && nextPath ? (
           <input type="hidden" name="next" value={nextPath} />
         ) : null}
-        <div>
-          <label
-            htmlFor="email"
-            className="mb-1.5 block text-sm font-medium text-zinc-700"
-          >
-            メールアドレス
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-            placeholder="you@example.com"
-          />
-        </div>
 
-        <div>
-          <label
-            htmlFor="password"
-            className="mb-1.5 block text-sm font-medium text-zinc-700"
-          >
-            パスワード
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            required
-            minLength={6}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
-            placeholder="6文字以上"
-          />
-        </div>
+        <TextInput
+          id="email"
+          name="email"
+          type="email"
+          label="メールアドレス"
+          autoComplete="email"
+          required
+          placeholder="you@example.com"
+        />
+
+        <TextInput
+          id="password"
+          name="password"
+          type="password"
+          label="パスワード"
+          autoComplete={config.passwordAutoComplete}
+          required
+          minLength={6}
+          placeholder="6文字以上"
+        />
 
         {state?.error ? (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {state.error}
-          </p>
+          <FormMessage variant="error">{state.error}</FormMessage>
         ) : null}
 
         {state?.success ? (
-          <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-            {state.success}
-          </p>
+          <FormMessage variant="success">{state.success}</FormMessage>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={pending}
-          className="w-full rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {pending ? "処理中..." : submitLabel}
-        </button>
+        <Button type="submit" fullWidth disabled={pending}>
+          {pending ? "処理中..." : config.submitLabel}
+        </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-zinc-600">
-        <Link href={alternateHref} className="font-medium text-zinc-900 underline-offset-4 hover:underline">
-          {alternateLabel}
+        <Link
+          href={config.alternateHref}
+          className="font-medium text-zinc-900 underline-offset-4 hover:underline"
+        >
+          {config.alternateLabel}
         </Link>
       </p>
     </div>

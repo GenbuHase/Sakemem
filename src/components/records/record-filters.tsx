@@ -1,15 +1,16 @@
-import Link from "next/link";
+import { Button, LinkButton } from "@/components/ui/button";
+import { Select, TextInput } from "@/components/ui/inputs";
 import {
   CATEGORY_LABELS,
   DRINK_CATEGORIES,
 } from "@/lib/constants/categories";
 import type { RecordFilters } from "@/lib/records/filter-records";
 
-type RecordFiltersProps = {
+type RecordFiltersFormProps = {
   filters: RecordFilters;
 };
 
-export function RecordFiltersForm({ filters }: RecordFiltersProps) {
+export function RecordFiltersForm({ filters }: RecordFiltersFormProps) {
   return (
     <form
       method="get"
@@ -17,53 +18,35 @@ export function RecordFiltersForm({ filters }: RecordFiltersProps) {
     >
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-[12rem] flex-1">
-          <label
-            htmlFor="q"
-            className="mb-1.5 block text-sm font-medium text-zinc-700"
-          >
-            キーワード
-          </label>
-          <input
+          <TextInput
             id="q"
             name="q"
             type="search"
+            label="キーワード"
             defaultValue={filters.query ?? ""}
             placeholder="名前・蔵元・メモで検索"
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
           />
         </div>
 
         <div className="w-full sm:w-40">
-          <label
-            htmlFor="kind"
-            className="mb-1.5 block text-sm font-medium text-zinc-700"
-          >
-            種別
-          </label>
-          <select
+          <Select
             id="kind"
             name="kind"
+            label="種別"
             defaultValue={filters.kind ?? "all"}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
           >
             <option value="all">すべて</option>
             <option value="drink">お酒のみ</option>
             <option value="food">おつまみのみ</option>
-          </select>
+          </Select>
         </div>
 
         <div className="w-full sm:w-44">
-          <label
-            htmlFor="category"
-            className="mb-1.5 block text-sm font-medium text-zinc-700"
-          >
-            カテゴリ
-          </label>
-          <select
+          <Select
             id="category"
             name="category"
+            label="カテゴリ"
             defaultValue={filters.category ?? ""}
-            className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
           >
             <option value="">すべて</option>
             {DRINK_CATEGORIES.map((category) => (
@@ -72,22 +55,13 @@ export function RecordFiltersForm({ filters }: RecordFiltersProps) {
               </option>
             ))}
             <option value="food">{CATEGORY_LABELS.food}</option>
-          </select>
+          </Select>
         </div>
 
-        <button
-          type="submit"
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800"
-        >
-          検索
-        </button>
-
-        <Link
-          href="/records"
-          className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
-        >
+        <Button type="submit">検索</Button>
+        <LinkButton variant="secondary" href="/records">
           クリア
-        </Link>
+        </LinkButton>
       </div>
     </form>
   );

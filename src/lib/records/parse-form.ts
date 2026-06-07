@@ -1,5 +1,39 @@
 import { FLAVOR_METRICS_BY_CATEGORY } from "@/lib/constants/flavor-metrics";
-import type { FlavorMetrics, RecordCategory } from "@/lib/types/record";
+import {
+  RECORD_CATEGORIES,
+  type FlavorMetrics,
+  type RecordCategory,
+} from "@/lib/types/record";
+import type { RecordWritePayload } from "./repository";
+
+const MIN_RATING = 1;
+const MAX_RATING = 5;
+
+export function parseString(formData: FormData, fieldName: string): string {
+  return String(formData.get(fieldName) ?? "").trim();
+}
+
+export function parseOptionalText(
+  formData: FormData,
+  fieldName: string,
+): string | null {
+  return parseString(formData, fieldName) || null;
+}
+
+export function parseOptionalRating(
+  formData: FormData,
+  fieldName: string,
+): number | null {
+  const raw = formData.get(fieldName);
+  if (raw === null || raw === "") return null;
+
+  const value = Number(raw);
+  if (Number.isInteger(value) && value >= MIN_RATING && value <= MAX_RATING) {
+    return value;
+  }
+
+  return null;
+}
 
 export function parseFlavorMetrics(
   formData: FormData,
@@ -13,7 +47,7 @@ export function parseFlavorMetrics(
     if (raw === null || raw === "") continue;
 
     const value = Number(raw);
-    if (Number.isInteger(value) && value >= 1 && value <= 5) {
+    if (Number.isInteger(value) && value >= MIN_RATING && value <= MAX_RATING) {
       metrics[key] = value;
     }
   }
@@ -21,25 +55,29 @@ export function parseFlavorMetrics(
   return metrics;
 }
 
-export function parseOptionalRating(
-  formData: FormData,
-  fieldName: string,
-): number | null {
-  const raw = formData.get(fieldName);
-  if (raw === null || raw === "") return null;
-
-  const value = Number(raw);
-  if (Number.isInteger(value) && value >= 1 && value <= 5) {
-    return value;
-  }
-
-  return null;
+export function parseRecordCategory(value: string): RecordCategory | null {
+  return RECORD_CATEGORIES.includes(value as RecordCategory)
+    ? (value as RecordCategory)
+    : null;
 }
 
-export function parseOptionalText(
+/**
+ * フォームから 1 件分のレコード書き込みペイロードを構築する。
+ * date / category / name の必須・型を検証して返す。
+ */
+export function parseRecordWritePayload(
   formData: FormData,
-  fieldName: string,
-): string | null {
-  const value = String(formData.get(fieldName) ?? "").trim();
-  return value || null;
+  options: { prefix: string; date: string; category: RecordCategory; name: string },
+): RecordWritePayload {
+  const { prefix, date, category, name } = options;
+
+  return {
+    date,
+    category,
+    name,
+    sub_info: parseOptionalText(formData, `${prefix}_sub_info`),
+    rating: parseOptionalRating(formData, `${prefix}_rating`),
+    flavor_metrics: parseFlavorMetrics(formData, prefix, category),
+    comment: parseOptionalText(formData, `${prefix}_comment`),
+  };
 }

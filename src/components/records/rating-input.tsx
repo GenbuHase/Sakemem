@@ -4,6 +4,8 @@ type RatingInputProps = {
   defaultValue?: number | null;
 };
 
+const RATING_VALUES = [1, 2, 3, 4, 5] as const;
+
 export function RatingInput({ name, label, defaultValue }: RatingInputProps) {
   return (
     <fieldset>
@@ -21,7 +23,7 @@ export function RatingInput({ name, label, defaultValue }: RatingInputProps) {
           />
           未評価
         </label>
-        {[1, 2, 3, 4, 5].map((value) => (
+        {RATING_VALUES.map((value) => (
           <label
             key={value}
             className="flex cursor-pointer items-center gap-1.5 text-sm text-zinc-700"

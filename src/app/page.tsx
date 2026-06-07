@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LinkButton } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
@@ -20,37 +20,27 @@ export default async function Home() {
           お酒とおつまみをペアで記録し、あとから振り返るライフログアプリです。
         </p>
 
-        {user ? (
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link
-              href="/records"
-              className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800"
-            >
-              タイムラインを見る
-            </Link>
-            <Link
-              href="/records/new"
-              className="rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100"
-            >
-              記録する
-            </Link>
-          </div>
-        ) : (
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link
-              href="/login"
-              className="rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-100"
-            >
-              ログイン
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800"
-            >
-              新規登録
-            </Link>
-          </div>
-        )}
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          {user ? (
+            <>
+              <LinkButton href="/records" size="lg">
+                タイムラインを見る
+              </LinkButton>
+              <LinkButton href="/records/new" variant="secondary" size="lg">
+                記録する
+              </LinkButton>
+            </>
+          ) : (
+            <>
+              <LinkButton href="/login" variant="secondary" size="lg">
+                ログイン
+              </LinkButton>
+              <LinkButton href="/signup" size="lg">
+                新規登録
+              </LinkButton>
+            </>
+          )}
+        </div>
       </main>
     </div>
   );

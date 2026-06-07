@@ -4,23 +4,28 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/require-user";
-import {
-  isOppositeRecordType,
-  filterLinkCandidates,
-  getPartners,
-} from "@/lib/records/pairing";
-import {
-  parseFlavorMetrics,
-  parseOptionalRating,
-  parseOptionalText,
-} from "@/lib/records/parse-form";
 import { isFoodCategory } from "@/lib/constants/categories";
 import {
-  RECORD_CATEGORIES,
-  type FlavorMetrics,
-  type RecordCategory,
-  type SakememRecord,
-} from "@/lib/types/record";
+  parseRecordCategory,
+  parseRecordWritePayload,
+  parseString,
+} from "@/lib/records/parse-form";
+import {
+  filterLinkCandidates,
+  getPartners,
+  isOppositeRecordType,
+} from "@/lib/records/pairing";
+import {
+  clearOrphanedPair,
+  deleteRecordById,
+  fetchAllRecords,
+  fetchRecordById,
+  insertRecords,
+  setRecordsPairId,
+  updateRecordById,
+  type RecordInsert,
+} from "@/lib/records/repository";
+import type { SakememRecord } from "@/lib/types/record";
 
 export type RecordActionState = {
   error?: string;
@@ -32,100 +37,39 @@ export type RecordPairingContext = {
   linkCandidates: SakememRecord[];
 };
 
-type RecordInsert = {
-  user_id: string;
-  pair_id: string | null;
-  date: string;
-  category: RecordCategory;
-  name: string;
-  sub_info: string | null;
-  rating: number | null;
-  flavor_metrics: FlavorMetrics;
-  comment: string | null;
-};
+const RECORDS_PATH = "/records";
 
-function isRecordCategory(value: string): value is RecordCategory {
-  return RECORD_CATEGORIES.includes(value as RecordCategory);
+function revalidateRecord(id?: string): void {
+  revalidatePath(RECORDS_PATH);
+  if (id) {
+    revalidatePath(`${RECORDS_PATH}/${id}/edit`);
+  }
 }
 
-async function clearOrphanedPair(
-  supabase: Awaited<ReturnType<typeof requireUser>>["supabase"],
-  pairId: string,
-): Promise<void> {
-  const { data: remaining, error } = await supabase
-    .from("records")
-    .select("id")
-    .eq("pair_id", pairId);
-
-  if (error) {
-    throw new Error("ペア情報の取得に失敗しました。");
-  }
-
-  if ((remaining ?? []).length <= 1) {
-    const { error: updateError } = await supabase
-      .from("records")
-      .update({ pair_id: null })
-      .eq("pair_id", pairId);
-
-    if (updateError) {
-      throw new Error("ペアの解除に失敗しました。");
-    }
-  }
+function toErrorState(error: unknown, fallback: string): RecordActionState {
+  return { error: error instanceof Error ? error.message : fallback };
 }
 
 export async function getRecords(): Promise<SakememRecord[]> {
   const { supabase } = await requireUser();
-
-  const { data, error } = await supabase
-    .from("records")
-    .select("*")
-    .order("date", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw new Error("記録の取得に失敗しました。");
-  }
-
-  return (data ?? []) as SakememRecord[];
+  return fetchAllRecords(supabase);
 }
 
 export async function getRecord(id: string): Promise<SakememRecord | null> {
   const { supabase } = await requireUser();
-
-  const { data, error } = await supabase
-    .from("records")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) {
-    throw new Error("記録の取得に失敗しました。");
-  }
-
-  return (data as SakememRecord | null) ?? null;
+  return fetchRecordById(supabase, id);
 }
 
 export async function getRecordPairingContext(
   id: string,
 ): Promise<RecordPairingContext | null> {
   const { supabase } = await requireUser();
-  const record = await getRecord(id);
+  const records = await fetchAllRecords(supabase);
+  const record = records.find((candidate) => candidate.id === id);
 
   if (!record) {
     return null;
   }
-
-  const { data, error } = await supabase
-    .from("records")
-    .select("*")
-    .order("date", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw new Error("記録の取得に失敗しました。");
-  }
-
-  const records = (data ?? []) as SakememRecord[];
 
   return {
     record,
@@ -140,90 +84,71 @@ export async function createRecords(
 ): Promise<RecordActionState> {
   const { supabase, user } = await requireUser();
 
-  const date = String(formData.get("date") ?? "").trim();
-  const category = String(formData.get("category") ?? "").trim();
-  const name = String(formData.get("name") ?? "").trim();
+  const date = parseString(formData, "date");
+  const rawCategory = parseString(formData, "category");
+  const name = parseString(formData, "name");
 
-  if (!date || !category || !name) {
+  if (!date || !rawCategory || !name) {
     return { error: "日付、カテゴリ、名前は必須です。" };
   }
 
-  if (!isRecordCategory(category)) {
+  const category = parseRecordCategory(rawCategory);
+  if (!category) {
     return { error: "カテゴリが不正です。" };
   }
 
-  const records: RecordInsert[] = [];
+  const includePairFood =
+    !isFoodCategory(category) && formData.get("include_pair_food") === "on";
+  const pairId = includePairFood ? randomUUID() : null;
 
-  if (isFoodCategory(category)) {
-    records.push({
+  const inserts: RecordInsert[] = [
+    {
       user_id: user.id,
-      pair_id: null,
-      date,
-      category: "food",
-      name,
-      sub_info: parseOptionalText(formData, "sub_info"),
-      rating: parseOptionalRating(formData, "rating"),
-      flavor_metrics: parseFlavorMetrics(formData, "record", "food"),
-      comment: parseOptionalText(formData, "comment"),
-    });
-  } else {
-    const includePairFood = formData.get("include_pair_food") === "on";
+      pair_id: pairId,
+      ...parseRecordWritePayload(formData, {
+        prefix: "record",
+        date,
+        category,
+        name,
+      }),
+    },
+  ];
 
-    records.push({
-      user_id: user.id,
-      pair_id: null,
-      date,
-      category,
-      name,
-      sub_info: parseOptionalText(formData, "sub_info"),
-      rating: parseOptionalRating(formData, "rating"),
-      flavor_metrics: parseFlavorMetrics(formData, "record", category),
-      comment: parseOptionalText(formData, "comment"),
-    });
+  if (includePairFood && pairId) {
+    const pairFoodCount = Number(formData.get("pair_food_count") ?? 1);
+    if (!Number.isInteger(pairFoodCount) || pairFoodCount < 1) {
+      return { error: "おつまみの件数が不正です。" };
+    }
 
-    if (includePairFood) {
-      const pairFoodCount = Number(formData.get("pair_food_count") ?? 1);
+    for (let index = 0; index < pairFoodCount; index += 1) {
+      const prefix = `pair_${index}`;
+      const pairName = parseString(formData, `${prefix}_name`);
 
-      if (!Number.isInteger(pairFoodCount) || pairFoodCount < 1) {
-        return { error: "おつまみの件数が不正です。" };
+      if (!pairName) {
+        return { error: `おつまみ ${index + 1} の名前を入力してください。` };
       }
 
-      const pairId = randomUUID();
-      records[0].pair_id = pairId;
-
-      for (let index = 0; index < pairFoodCount; index += 1) {
-        const prefix = `pair_${index}`;
-        const pairName = String(formData.get(`${prefix}_name`) ?? "").trim();
-
-        if (!pairName) {
-          return {
-            error: `おつまみ ${index + 1} の名前を入力してください。`,
-          };
-        }
-
-        records.push({
-          user_id: user.id,
-          pair_id: pairId,
+      inserts.push({
+        user_id: user.id,
+        pair_id: pairId,
+        ...parseRecordWritePayload(formData, {
+          prefix,
           date,
           category: "food",
           name: pairName,
-          sub_info: parseOptionalText(formData, `${prefix}_sub_info`),
-          rating: parseOptionalRating(formData, `${prefix}_rating`),
-          flavor_metrics: parseFlavorMetrics(formData, prefix, "food"),
-          comment: parseOptionalText(formData, `${prefix}_comment`),
-        });
-      }
+        }),
+      });
     }
   }
 
-  const { error } = await supabase.from("records").insert(records);
-
-  if (error) {
-    return { error: "記録の保存に失敗しました。" };
+  try {
+    await insertRecords(supabase, inserts);
+  } catch (error) {
+    return toErrorState(error, "記録の保存に失敗しました。");
   }
 
-  revalidatePath("/records");
-  redirect("/records");
+  revalidateRecord();
+  redirect(RECORDS_PATH);
 }
 
 export async function updateRecord(
@@ -232,161 +157,124 @@ export async function updateRecord(
 ): Promise<RecordActionState> {
   const { supabase } = await requireUser();
 
-  const id = String(formData.get("id") ?? "").trim();
-  const date = String(formData.get("date") ?? "").trim();
-  const category = String(formData.get("category") ?? "").trim();
-  const name = String(formData.get("name") ?? "").trim();
+  const id = parseString(formData, "id");
+  const date = parseString(formData, "date");
+  const rawCategory = parseString(formData, "category");
+  const name = parseString(formData, "name");
 
-  if (!id || !date || !category || !name) {
+  if (!id || !date || !rawCategory || !name) {
     return { error: "必須項目を入力してください。" };
   }
 
-  if (!isRecordCategory(category)) {
+  const category = parseRecordCategory(rawCategory);
+  if (!category) {
     return { error: "カテゴリが不正です。" };
   }
 
-  const { error } = await supabase
-    .from("records")
-    .update({
-      date,
-      category,
-      name,
-      sub_info: parseOptionalText(formData, "sub_info"),
-      rating: parseOptionalRating(formData, "rating"),
-      flavor_metrics: parseFlavorMetrics(formData, "record", category),
-      comment: parseOptionalText(formData, "comment"),
-    })
-    .eq("id", id);
-
-  if (error) {
-    return { error: "記録の更新に失敗しました。" };
+  try {
+    await updateRecordById(
+      supabase,
+      id,
+      parseRecordWritePayload(formData, {
+        prefix: "record",
+        date,
+        category,
+        name,
+      }),
+    );
+  } catch (error) {
+    return toErrorState(error, "記録の更新に失敗しました。");
   }
 
-  revalidatePath("/records");
-  redirect("/records");
+  revalidateRecord(id);
+  redirect(RECORDS_PATH);
 }
 
-export async function updateRecordPairing(
+export async function unlinkRecordPair(
   _prevState: RecordActionState | null,
   formData: FormData,
 ): Promise<RecordActionState> {
   const { supabase } = await requireUser();
-
-  const id = String(formData.get("id") ?? "").trim();
-  const pairingAction = String(formData.get("pairing_action") ?? "").trim();
+  const id = parseString(formData, "id");
 
   if (!id) {
     return { error: "記録が指定されていません。" };
   }
 
-  const record = await getRecord(id);
-
-  if (!record) {
-    return { error: "記録が見つかりません。" };
-  }
-
-  if (pairingAction === "unlink") {
+  try {
+    const record = await fetchRecordById(supabase, id);
+    if (!record) {
+      return { error: "記録が見つかりません。" };
+    }
     if (!record.pair_id) {
       return { error: "この記録はペアリングされていません。" };
     }
 
     const previousPairId = record.pair_id;
-
-    const { error: unlinkError } = await supabase
-      .from("records")
-      .update({ pair_id: null })
-      .eq("id", id);
-
-    if (unlinkError) {
-      return { error: "ペアの解除に失敗しました。" };
-    }
-
-    try {
-      await clearOrphanedPair(supabase, previousPairId);
-    } catch (error) {
-      return {
-        error:
-          error instanceof Error ? error.message : "ペアの解除に失敗しました。",
-      };
-    }
-
-    revalidatePath("/records");
-    revalidatePath(`/records/${id}/edit`);
-    return {};
+    await setRecordsPairId(supabase, [id], null);
+    await clearOrphanedPair(supabase, previousPairId);
+  } catch (error) {
+    return toErrorState(error, "ペアの解除に失敗しました。");
   }
 
-  if (pairingAction === "link") {
-    const partnerId = String(formData.get("partner_id") ?? "").trim();
+  revalidateRecord(id);
+  return {};
+}
 
-    if (!partnerId) {
-      return { error: "ペアにする記録を選択してください。" };
+export async function linkRecordPair(
+  _prevState: RecordActionState | null,
+  formData: FormData,
+): Promise<RecordActionState> {
+  const { supabase } = await requireUser();
+  const id = parseString(formData, "id");
+  const partnerId = parseString(formData, "partner_id");
+
+  if (!id) {
+    return { error: "記録が指定されていません。" };
+  }
+  if (!partnerId) {
+    return { error: "ペアにする記録を選択してください。" };
+  }
+
+  try {
+    const [record, partner] = await Promise.all([
+      fetchRecordById(supabase, id),
+      fetchRecordById(supabase, partnerId),
+    ]);
+
+    if (!record) {
+      return { error: "記録が見つかりません。" };
     }
-
-    const partner = await getRecord(partnerId);
-
     if (!partner) {
       return { error: "ペアにする記録が見つかりません。" };
     }
-
     if (!isOppositeRecordType(record, partner)) {
       return { error: "お酒とおつまみのみペアにできます。" };
     }
 
     const pairId = record.pair_id ?? partner.pair_id ?? randomUUID();
-
-    const { error: linkError } = await supabase
-      .from("records")
-      .update({ pair_id: pairId })
-      .in("id", [record.id, partner.id]);
-
-    if (linkError) {
-      return { error: "ペアの設定に失敗しました。" };
-    }
-
-    revalidatePath("/records");
-    revalidatePath(`/records/${id}/edit`);
-    return {};
+    await setRecordsPairId(supabase, [record.id, partner.id], pairId);
+  } catch (error) {
+    return toErrorState(error, "ペアの設定に失敗しました。");
   }
 
-  return { error: "操作が不正です。" };
+  revalidateRecord(id);
+  return {};
 }
 
 export async function deleteRecord(id: string): Promise<void> {
   const { supabase } = await requireUser();
 
-  const { data: record, error: fetchError } = await supabase
-    .from("records")
-    .select("pair_id")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (fetchError) {
-    throw new Error("記録の取得に失敗しました。");
-  }
-
+  const record = await fetchRecordById(supabase, id);
   if (!record) {
     throw new Error("記録が見つかりません。");
   }
 
-  const previousPairId = record.pair_id;
+  await deleteRecordById(supabase, id);
 
-  const { error } = await supabase.from("records").delete().eq("id", id);
-
-  if (error) {
-    throw new Error("記録の削除に失敗しました。");
+  if (record.pair_id) {
+    await clearOrphanedPair(supabase, record.pair_id);
   }
 
-  if (previousPairId) {
-    try {
-      await clearOrphanedPair(supabase, previousPairId);
-    } catch (pairError) {
-      throw new Error(
-        pairError instanceof Error
-          ? pairError.message
-          : "ペアの解除に失敗しました。",
-      );
-    }
-  }
-
-  revalidatePath("/records");
+  revalidateRecord();
 }

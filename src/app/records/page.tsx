@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { getRecords } from "@/app/actions/records";
 import { RecordFiltersForm } from "@/components/records/record-filters";
 import { RecordStats } from "@/components/records/record-stats";
 import { Timeline } from "@/components/records/timeline";
+import { LinkButton } from "@/components/ui/button";
 import { requireUser } from "@/lib/auth/require-user";
 import { analyzeRecords } from "@/lib/records/analyze-records";
 import {
@@ -41,12 +41,9 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
             過去の晩酌記録を振り返れます。
           </p>
         </div>
-        <Link
-          href="/records/new"
-          className="shrink-0 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800"
-        >
+        <LinkButton href="/records/new" className="shrink-0">
           記録する
-        </Link>
+        </LinkButton>
       </div>
 
       <div className="space-y-6">
