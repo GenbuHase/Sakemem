@@ -14,12 +14,15 @@ export async function Header() {
       <div className="mx-auto flex h-14 max-w-3xl items-center justify-between gap-4 px-4 sm:px-6">
         <Link
           href="/"
-          className="rounded-md px-1 py-0.5 text-sm font-semibold tracking-widest text-zinc-900 uppercase transition hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+          className="shrink-0 rounded-md px-1 py-0.5 text-sm font-semibold tracking-widest text-zinc-900 uppercase transition hover:text-zinc-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
         >
           Sakemem
         </Link>
 
-        <nav className="flex items-center gap-1.5 text-sm sm:gap-2">
+        <nav
+          aria-label="メインナビゲーション"
+          className="flex shrink-0 items-center text-sm"
+        >
           <HeaderNav
             user={user ? { email: user.email ?? "" } : null}
             signOutAction={signOut}
