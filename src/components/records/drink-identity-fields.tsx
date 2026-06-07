@@ -16,6 +16,7 @@ type DrinkIdentityFieldsProps = {
   subInfoLabel?: string;
   namePlaceholder?: string;
   subInfoPlaceholder?: string;
+  nameRequired?: boolean;
 };
 
 export function DrinkIdentityFields({
@@ -30,6 +31,7 @@ export function DrinkIdentityFields({
   subInfoLabel = "補助情報",
   namePlaceholder = "銘柄名・商品名",
   subInfoPlaceholder = "蔵元、スタイル、生産地 など",
+  nameRequired = true,
 }: DrinkIdentityFieldsProps) {
   const listboxId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -148,7 +150,7 @@ export function DrinkIdentityFields({
           id={nameId}
           name={nameField}
           type="text"
-          required
+          required={nameRequired}
           value={name}
           onChange={(event) => {
             const nextName = event.target.value;

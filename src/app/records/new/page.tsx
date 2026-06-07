@@ -20,10 +20,10 @@ export default async function NewRecordPage() {
           ← タイムラインに戻る
         </Link>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight text-zinc-900">
-          晩酌を記録する
+          記録する
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          お酒とおつまみを同時に記録すると、ペアとして表示されます。
+          カテゴリでお酒とおつまみを切り替えられます。お酒を選んだときは、おつまみの同時記録もできます。
         </p>
       </div>
 

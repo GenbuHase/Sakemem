@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getRecord } from "@/app/actions/records";
+import { getRecordPairingContext } from "@/app/actions/records";
 import { EditRecordForm } from "@/components/records/edit-record-form";
+import { RecordPairingSection } from "@/components/records/record-pairing-section";
 import { requireUser } from "@/lib/auth/require-user";
 
 type EditRecordPageProps = {
@@ -16,11 +17,13 @@ export const metadata: Metadata = {
 export default async function EditRecordPage({ params }: EditRecordPageProps) {
   await requireUser();
   const { id } = await params;
-  const record = await getRecord(id);
+  const pairingContext = await getRecordPairingContext(id);
 
-  if (!record) {
+  if (!pairingContext) {
     notFound();
   }
+
+  const { record, partners, linkCandidates } = pairingContext;
 
   return (
     <div className="mx-auto w-full max-w-2xl px-6 py-10">
@@ -36,8 +39,16 @@ export default async function EditRecordPage({ params }: EditRecordPageProps) {
         </h1>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-5">
-        <EditRecordForm record={record} />
+      <div className="space-y-6">
+        <div className="rounded-xl border border-zinc-200 bg-white p-5">
+          <EditRecordForm record={record} />
+        </div>
+
+        <RecordPairingSection
+          record={record}
+          partners={partners}
+          linkCandidates={linkCandidates}
+        />
       </div>
     </div>
   );

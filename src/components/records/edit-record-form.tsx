@@ -91,6 +91,13 @@ export function EditRecordForm({ record }: EditRecordFormProps) {
         subInfoId="sub_info"
         defaultName={record.name}
         defaultSubInfo={record.sub_info ?? ""}
+        nameLabel={record.category === "food" ? "おつまみの名前" : "名前"}
+        namePlaceholder={
+          record.category === "food" ? "枝豆、焼き鳥 など" : "銘柄名・商品名"
+        }
+        subInfoPlaceholder={
+          record.category === "food" ? "ジャンル、店名 など" : undefined
+        }
       />
 
       <RatingInput
