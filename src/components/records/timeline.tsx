@@ -43,7 +43,9 @@ export function Timeline({ entries, filtered = false }: TimelineProps) {
           </time>
 
           {entry.kind === "single" ? (
-            <RecordDetail record={entry.record} />
+            <div className="grid gap-3 md:grid-cols-2">
+              <RecordDetail record={entry.record} />
+            </div>
           ) : (
             <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80">
               <div className="flex items-center gap-2 border-b border-zinc-200 bg-white px-4 py-2">

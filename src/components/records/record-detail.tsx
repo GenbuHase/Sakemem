@@ -73,9 +73,9 @@ export function RecordDetail({
         </div>
 
         {filledMetrics.length > 0 ? (
-          <div>
+          <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-medium text-zinc-500">味の評価</p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap justify-end gap-1.5">
               {filledMetrics.map(({ key, label }) => (
                 <span
                   key={key}
