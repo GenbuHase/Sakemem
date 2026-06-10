@@ -15,6 +15,7 @@ function makeRecord(
     created_at: "2026-01-01T12:00:00Z",
     date: "2026-01-01",
     producer: null,
+    style: null,
     sub_info: null,
     place: null,
     rating: null,

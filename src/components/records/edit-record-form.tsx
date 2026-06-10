@@ -96,6 +96,7 @@ export function EditRecordForm({ record }: EditRecordFormProps) {
             }
             defaultName={record.name}
             defaultProducer={record.producer ?? ""}
+            defaultStyle={record.style}
             defaultSubInfo={record.sub_info ?? ""}
             defaultRating={record.rating}
             defaultComment={record.comment ?? ""}

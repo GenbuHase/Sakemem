@@ -2,11 +2,10 @@ import { useState } from "react";
 import { Select, TextArea } from "@/components/ui/inputs";
 import { isFoodCategory } from "@/lib/constants/categories";
 import {
-  WINE_STYLES,
-  WINE_STYLE_LABELS,
-  decodeWineSubInfo,
-  type WineStyle,
-} from "@/lib/constants/wine";
+  getDrinkStyleOptions,
+  getSubInfoPlaceholderForCategory,
+  hasDrinkStyles,
+} from "@/lib/constants/drink-styles";
 import type { FlavorMetrics, RecordCategory } from "@/lib/types/record";
 import { DrinkIdentityFields } from "./drink-identity-fields";
 import { FlavorMetricsInput } from "./flavor-metrics-input";
@@ -28,6 +27,7 @@ type RecordCoreFieldsProps = {
   commentPlaceholder?: string;
   defaultName?: string;
   defaultProducer?: string;
+  defaultStyle?: string | null;
   defaultSubInfo?: string;
   defaultRating?: number | null;
   defaultComment?: string;
@@ -54,6 +54,7 @@ export function RecordCoreFields({
   commentPlaceholder = "感想やメモ",
   defaultName,
   defaultProducer,
+  defaultStyle,
   defaultSubInfo,
   defaultRating,
   defaultComment,
@@ -64,36 +65,26 @@ export function RecordCoreFields({
   const subInfoField = `${prefix}_sub_info`;
   const commentField = `${prefix}_comment`;
   const isFood = isFoodCategory(category);
-  const isWine = category === "wine";
-  const decodedWineSubInfo = isWine
-    ? decodeWineSubInfo(defaultSubInfo ?? null)
-    : null;
-  const [wineStyle, setWineStyle] = useState<WineStyle | "">(
-    decodedWineSubInfo?.style ?? "",
-  );
-  const resolvedSubInfoPlaceholder = isWine
-    ? "生産地、ぶどう品種 など"
-    : subInfoPlaceholder;
-  const resolvedDefaultSubInfo = isWine
-    ? (decodedWineSubInfo?.detail ?? "")
-    : defaultSubInfo;
+  const showStyleSelect = hasDrinkStyles(category);
+  const [style, setStyle] = useState(defaultStyle ?? "");
+  const stylePlaceholder = getSubInfoPlaceholderForCategory(category);
+  const resolvedSubInfoPlaceholder =
+    stylePlaceholder ?? subInfoPlaceholder;
 
   return (
     <>
-      {isWine ? (
+      {showStyleSelect ? (
         <Select
-          id={`${prefix}_wine_style`}
-          name={`${prefix}_wine_style`}
+          id={`${prefix}_style`}
+          name={`${prefix}_style`}
           label="種類"
-          value={wineStyle}
-          onChange={(event) =>
-            setWineStyle(event.target.value as WineStyle | "")
-          }
+          value={style}
+          onChange={(event) => setStyle(event.target.value)}
         >
           <option value="">未選択</option>
-          {WINE_STYLES.map((style) => (
-            <option key={style} value={style}>
-              {WINE_STYLE_LABELS[style]}
+          {getDrinkStyleOptions(category).map((option) => (
+            <option key={option.key} value={option.key}>
+              {option.label}
             </option>
           ))}
         </Select>
@@ -112,12 +103,12 @@ export function RecordCoreFields({
         namePlaceholder={namePlaceholder}
         producerLabel={producerLabel}
         producerPlaceholder={producerPlaceholder}
-        subInfoLabel={isWine ? "生産地・品種など" : subInfoLabel}
+        subInfoLabel={showStyleSelect ? "補助情報" : subInfoLabel}
         subInfoPlaceholder={resolvedSubInfoPlaceholder}
         nameRequired={nameRequired}
         defaultName={defaultName}
         defaultProducer={defaultProducer}
-        defaultSubInfo={resolvedDefaultSubInfo}
+        defaultSubInfo={defaultSubInfo}
       />
 
       <RatingInput
@@ -126,10 +117,10 @@ export function RecordCoreFields({
         defaultValue={defaultRating}
       />
       <FlavorMetricsInput
-        key={isWine ? wineStyle || "default" : category}
+        key={showStyleSelect ? style || "default" : category}
         prefix={prefix}
         category={category}
-        wineStyle={isWine ? wineStyle || null : undefined}
+        style={showStyleSelect ? style || null : undefined}
         defaultValues={defaultFlavorMetrics}
       />
 

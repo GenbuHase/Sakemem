@@ -24,6 +24,7 @@ export type SakememRecord = {
   category: RecordCategory;
   name: string;
   producer: string | null;
+  style: string | null;
   sub_info: string | null;
   place: string | null;
   rating: number | null;

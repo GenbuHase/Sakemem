@@ -1,4 +1,5 @@
 import { isFoodCategory } from "@/lib/constants/categories";
+import { getDrinkStyleLabel } from "@/lib/constants/drink-styles";
 import {
   RECORD_CATEGORIES,
   type RecordCategory,
@@ -46,6 +47,7 @@ function matchesQuery(record: SakememRecord, query: string): boolean {
   const fields = [
     record.name,
     record.producer,
+    getDrinkStyleLabel(record.category, record.style),
     record.sub_info,
     record.place,
     record.comment,

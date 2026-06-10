@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { getCategoryLabel } from "@/lib/constants/categories";
-import { getFlavorMetricDefs } from "@/lib/constants/flavor-metrics";
 import {
-  WINE_FLAVOR_METRIC_LABELS,
-  decodeWineSubInfo,
-} from "@/lib/constants/wine";
+  STYLE_AWARE_FLAVOR_LABELS,
+  getDrinkStyleLabel,
+  hasDrinkStyles,
+} from "@/lib/constants/drink-styles";
+import { getFlavorMetricDefs } from "@/lib/constants/flavor-metrics";
 import type { SakememRecord } from "@/lib/types/record";
 import { cx } from "@/components/ui/styles";
 import { DeleteRecordButton } from "./delete-record-button";
@@ -21,15 +22,8 @@ export function RecordDetail({
   showActions = true,
   nested = false,
 }: RecordDetailProps) {
-  const wineSubInfo =
-    record.category === "wine" ? decodeWineSubInfo(record.sub_info) : null;
-  const flavorDefs =
-    record.category === "wine"
-      ? buildWineFlavorMetricDefs(
-          record.flavor_metrics,
-          wineSubInfo?.style ?? null,
-        )
-      : getFlavorMetricDefs(record.category);
+  const styleLabel = getDrinkStyleLabel(record.category, record.style);
+  const flavorDefs = buildFlavorMetricDefs(record);
   const filledMetrics = flavorDefs.filter(
     ({ key }) => record.flavor_metrics[key] !== undefined,
   );
@@ -52,6 +46,11 @@ export function RecordDetail({
           {record.producer ? (
             <p className="mt-0.5 truncate text-sm text-zinc-500">
               {record.producer}
+            </p>
+          ) : null}
+          {styleLabel ? (
+            <p className="mt-0.5 truncate text-sm text-zinc-500">
+              {styleLabel}
             </p>
           ) : null}
           {record.sub_info ? (
@@ -113,17 +112,23 @@ export function RecordDetail({
   );
 }
 
-function buildWineFlavorMetricDefs(
-  flavorMetrics: SakememRecord["flavor_metrics"],
-  wineStyle: ReturnType<typeof decodeWineSubInfo>["style"],
-) {
+function buildFlavorMetricDefs(record: SakememRecord) {
   const defsByKey = new Map(
-    getFlavorMetricDefs("wine", wineStyle).map((def) => [def.key, def]),
+    getFlavorMetricDefs(record.category, record.style).map((def) => [
+      def.key,
+      def,
+    ]),
   );
 
-  for (const key of Object.keys(flavorMetrics)) {
-    if (!defsByKey.has(key) && WINE_FLAVOR_METRIC_LABELS[key]) {
-      defsByKey.set(key, { key, label: WINE_FLAVOR_METRIC_LABELS[key] });
+  if (!hasDrinkStyles(record.category)) {
+    return Array.from(defsByKey.values());
+  }
+
+  const fallbackLabels = STYLE_AWARE_FLAVOR_LABELS[record.category] ?? {};
+
+  for (const key of Object.keys(record.flavor_metrics)) {
+    if (!defsByKey.has(key) && fallbackLabels[key]) {
+      defsByKey.set(key, { key, label: fallbackLabels[key] });
     }
   }
 

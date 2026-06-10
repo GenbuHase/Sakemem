@@ -1,4 +1,4 @@
-import { getWineFlavorMetrics, type WineStyle } from "@/lib/constants/wine";
+import { getFlavorMetricsForStyle } from "@/lib/constants/drink-styles";
 import type { RecordCategory } from "@/lib/types/record";
 
 export type FlavorMetricDef = {
@@ -63,10 +63,15 @@ export const FLAVOR_METRICS_BY_CATEGORY: Record<
 
 export function getFlavorMetricDefs(
   category: RecordCategory,
-  wineStyle?: WineStyle | null,
+  style?: string | null,
 ): FlavorMetricDef[] {
+  const styleMetrics = getFlavorMetricsForStyle(category, style);
+  if (styleMetrics) {
+    return styleMetrics;
+  }
+
   if (category === "wine") {
-    return getWineFlavorMetrics(wineStyle);
+    return getFlavorMetricsForStyle(category, "other")!;
   }
 
   return FLAVOR_METRICS_BY_CATEGORY[category];
