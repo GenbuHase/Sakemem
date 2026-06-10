@@ -1,3 +1,4 @@
+import { getWineFlavorMetrics, type WineStyle } from "@/lib/constants/wine";
 import type { RecordCategory } from "@/lib/types/record";
 
 export type FlavorMetricDef = {
@@ -21,8 +22,8 @@ export const FLAVOR_METRICS_BY_CATEGORY: Record<
   ],
   wine: [
     { key: "body", label: "ボディ" },
-    { key: "tannin", label: "渋み" },
     { key: "acidity", label: "酸味" },
+    { key: "aroma", label: "香り" },
   ],
   sour: [
     { key: "acidity", label: "酸味" },
@@ -59,3 +60,14 @@ export const FLAVOR_METRICS_BY_CATEGORY: Record<
     { key: "finish", label: "キレ" },
   ],
 };
+
+export function getFlavorMetricDefs(
+  category: RecordCategory,
+  wineStyle?: WineStyle | null,
+): FlavorMetricDef[] {
+  if (category === "wine") {
+    return getWineFlavorMetrics(wineStyle);
+  }
+
+  return FLAVOR_METRICS_BY_CATEGORY[category];
+}

@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { getCategoryLabel } from "@/lib/constants/categories";
-import { FLAVOR_METRICS_BY_CATEGORY } from "@/lib/constants/flavor-metrics";
+import { getFlavorMetricDefs } from "@/lib/constants/flavor-metrics";
+import {
+  WINE_FLAVOR_METRIC_LABELS,
+  decodeWineSubInfo,
+} from "@/lib/constants/wine";
 import type { SakememRecord } from "@/lib/types/record";
 import { cx } from "@/components/ui/styles";
 import { DeleteRecordButton } from "./delete-record-button";
@@ -17,7 +21,15 @@ export function RecordDetail({
   showActions = true,
   nested = false,
 }: RecordDetailProps) {
-  const flavorDefs = FLAVOR_METRICS_BY_CATEGORY[record.category];
+  const wineSubInfo =
+    record.category === "wine" ? decodeWineSubInfo(record.sub_info) : null;
+  const flavorDefs =
+    record.category === "wine"
+      ? buildWineFlavorMetricDefs(
+          record.flavor_metrics,
+          wineSubInfo?.style ?? null,
+        )
+      : getFlavorMetricDefs(record.category);
   const filledMetrics = flavorDefs.filter(
     ({ key }) => record.flavor_metrics[key] !== undefined,
   );
@@ -99,4 +111,21 @@ export function RecordDetail({
       </div>
     </div>
   );
+}
+
+function buildWineFlavorMetricDefs(
+  flavorMetrics: SakememRecord["flavor_metrics"],
+  wineStyle: ReturnType<typeof decodeWineSubInfo>["style"],
+) {
+  const defsByKey = new Map(
+    getFlavorMetricDefs("wine", wineStyle).map((def) => [def.key, def]),
+  );
+
+  for (const key of Object.keys(flavorMetrics)) {
+    if (!defsByKey.has(key) && WINE_FLAVOR_METRIC_LABELS[key]) {
+      defsByKey.set(key, { key, label: WINE_FLAVOR_METRIC_LABELS[key] });
+    }
+  }
+
+  return Array.from(defsByKey.values());
 }

@@ -1,10 +1,12 @@
 import { Select } from "@/components/ui/inputs";
-import { FLAVOR_METRICS_BY_CATEGORY } from "@/lib/constants/flavor-metrics";
+import { getFlavorMetricDefs } from "@/lib/constants/flavor-metrics";
+import type { WineStyle } from "@/lib/constants/wine";
 import type { FlavorMetrics, RecordCategory } from "@/lib/types/record";
 
 type FlavorMetricsInputProps = {
   prefix: string;
   category: RecordCategory;
+  wineStyle?: WineStyle | null;
   defaultValues?: FlavorMetrics;
 };
 
@@ -13,9 +15,10 @@ const RATING_VALUES = [1, 2, 3, 4, 5] as const;
 export function FlavorMetricsInput({
   prefix,
   category,
+  wineStyle,
   defaultValues = {},
 }: FlavorMetricsInputProps) {
-  const metrics = FLAVOR_METRICS_BY_CATEGORY[category];
+  const metrics = getFlavorMetricDefs(category, wineStyle);
 
   if (metrics.length === 0) {
     return null;

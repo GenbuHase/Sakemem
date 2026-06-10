@@ -1,5 +1,6 @@
 import { isFoodCategory } from "@/lib/constants/categories";
-import { FLAVOR_METRICS_BY_CATEGORY } from "@/lib/constants/flavor-metrics";
+import { getFlavorMetricDefs } from "@/lib/constants/flavor-metrics";
+import { encodeWineSubInfo, parseWineStyle } from "@/lib/constants/wine";
 import {
   RECORD_CATEGORIES,
   type FlavorMetrics,
@@ -43,7 +44,12 @@ export function parseFlavorMetrics(
 ): FlavorMetrics {
   const metrics: FlavorMetrics = {};
 
-  for (const { key } of FLAVOR_METRICS_BY_CATEGORY[category]) {
+  const wineStyle =
+    category === "wine"
+      ? parseWineStyle(formData.get(`${prefix}_wine_style`))
+      : null;
+
+  for (const { key } of getFlavorMetricDefs(category, wineStyle)) {
     const raw = formData.get(`${prefix}_flavor_${key}`);
     if (raw === null || raw === "") continue;
 
@@ -89,7 +95,13 @@ export function parseRecordWritePayload(
     producer: isFoodCategory(category)
       ? null
       : parseOptionalText(formData, `${prefix}_producer`),
-    sub_info: parseOptionalText(formData, `${prefix}_sub_info`),
+    sub_info:
+      category === "wine"
+        ? encodeWineSubInfo(
+            parseWineStyle(formData.get(`${prefix}_wine_style`)),
+            parseOptionalText(formData, `${prefix}_sub_info`),
+          )
+        : parseOptionalText(formData, `${prefix}_sub_info`),
     place: place ?? parsePlace(formData),
     rating: parseOptionalRating(formData, `${prefix}_rating`),
     flavor_metrics: parseFlavorMetrics(formData, prefix, category),
