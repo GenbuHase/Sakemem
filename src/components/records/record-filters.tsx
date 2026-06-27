@@ -1,42 +1,61 @@
-import { Button, LinkButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Select, TextInput } from "@/components/ui/inputs";
 import {
   CATEGORY_LABELS,
   DRINK_CATEGORIES,
 } from "@/lib/constants/categories";
-import type { RecordFilters } from "@/lib/records/filter-records";
+import type { RecordCategory } from "@/lib/types/record";
+import type { RecordKindFilter } from "@/lib/records/filter-records";
 
 type RecordFiltersFormProps = {
-  filters: RecordFilters;
+  query: string;
+  kind: RecordKindFilter;
+  category: RecordCategory | "";
+  onQueryChange: (query: string) => void;
+  onKindChange: (kind: RecordKindFilter) => void;
+  onCategoryChange: (category: RecordCategory | "") => void;
+  onClear: () => void;
 };
 
-function buildActiveFilterLabels(filters: RecordFilters): string[] {
+function buildActiveFilterLabels(
+  query: string,
+  kind: RecordKindFilter,
+  category: RecordCategory | "",
+): string[] {
   const labels: string[] = [];
 
-  if (filters.query) {
-    labels.push(`「${filters.query}」`);
+  if (query) {
+    labels.push(`「${query}」`);
   }
-  if (filters.kind === "drink") {
+  if (kind === "drink") {
     labels.push("お酒のみ");
   }
-  if (filters.kind === "food") {
+  if (kind === "food") {
     labels.push("おつまみのみ");
   }
-  if (filters.category) {
-    labels.push(CATEGORY_LABELS[filters.category]);
+  if (category) {
+    labels.push(CATEGORY_LABELS[category]);
   }
 
   return labels;
 }
 
-export function RecordFiltersForm({ filters }: RecordFiltersFormProps) {
-  const activeLabels = buildActiveFilterLabels(filters);
+export function RecordFiltersForm({
+  query,
+  kind,
+  category,
+  onQueryChange,
+  onKindChange,
+  onCategoryChange,
+  onClear,
+}: RecordFiltersFormProps) {
+  const activeLabels = buildActiveFilterLabels(query, kind, category);
   const hasActiveFilters = activeLabels.length > 0;
 
   return (
     <div className="space-y-3">
       <form
-        method="get"
+        onSubmit={(e) => e.preventDefault()}
         className="rounded-xl border border-zinc-200 bg-white p-4"
       >
         <div className="flex flex-wrap items-end gap-3">
@@ -46,7 +65,8 @@ export function RecordFiltersForm({ filters }: RecordFiltersFormProps) {
               name="q"
               type="search"
               label="キーワード"
-              defaultValue={filters.query ?? ""}
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
               placeholder="名前・蔵元・メモで検索"
             />
           </div>
@@ -56,7 +76,8 @@ export function RecordFiltersForm({ filters }: RecordFiltersFormProps) {
               id="kind"
               name="kind"
               label="種別"
-              defaultValue={filters.kind ?? "all"}
+              value={kind}
+              onChange={(e) => onKindChange(e.target.value as RecordKindFilter)}
             >
               <option value="all">すべて</option>
               <option value="drink">お酒のみ</option>
@@ -69,32 +90,33 @@ export function RecordFiltersForm({ filters }: RecordFiltersFormProps) {
               id="category"
               name="category"
               label="カテゴリ"
-              defaultValue={filters.category ?? ""}
+              value={category}
+              onChange={(e) =>
+                onCategoryChange(e.target.value as RecordCategory | "")
+              }
             >
               <option value="">すべて</option>
-              {DRINK_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {CATEGORY_LABELS[category]}
+              {DRINK_CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>
+                  {CATEGORY_LABELS[cat]}
                 </option>
               ))}
               <option value="food">{CATEGORY_LABELS.food}</option>
             </Select>
           </div>
 
-          <div className="flex w-full gap-2 sm:w-auto">
-            <Button type="submit" className="flex-1 sm:flex-none">
-              検索
-            </Button>
-            {hasActiveFilters ? (
-              <LinkButton
+          {hasActiveFilters ? (
+            <div className="flex w-full gap-2 sm:w-auto">
+              <Button
+                type="button"
                 variant="secondary"
-                href="/records"
+                onClick={onClear}
                 className="flex-1 sm:flex-none"
               >
                 クリア
-              </LinkButton>
-            ) : null}
-          </div>
+              </Button>
+            </div>
+          ) : null}
         </div>
       </form>
 
