@@ -59,7 +59,7 @@ export function RecordFiltersForm({
         className="rounded-xl border border-zinc-200 bg-white p-4"
       >
         <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-[12rem] flex-1">
+          <div className="min-w-48 flex-1">
             <TextInput
               id="q"
               name="q"
