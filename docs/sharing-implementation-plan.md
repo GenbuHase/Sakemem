@@ -1,7 +1,8 @@
 # Sakemem 共有機能 — 本実装計画
 
 > 作成日: 2026-06-28  
-> ステータス: 実装待ち  
+> 更新日: 2026-06-28（Phase A 実装完了・チェックリスト更新・ローカル確認手順 §15 追加）  
+> ステータス: Phase A 実装済み（各環境への `005` 適用・本番 OG 検証は環境依存）  
 > 関連: [sharing-feature.md](./sharing-feature.md)（設計メモ・背景）、[Sakemem_Context.md](../Sakemem_Context.md)、[performance-improvement.md](./performance-improvement.md)
 
 本ドキュメントは [sharing-feature.md](./sharing-feature.md) の **Phase A** を、会話で確定したスコープに絞った **実装手順書** である。背景・方針の議論は設計メモを参照し、本書では DB・API・画面・OGP・工数まで落とし込む。
@@ -259,13 +260,21 @@ $$;
 
 `GRANT EXECUTE ON FUNCTION ... TO anon, authenticated;` を忘れないこと。
 
-ペア表示時は、共有記録ページ側で `pair_id` があれば同一 `pair_id` かつ同一 `user_id`（RPC 経由で本人の公開記録のみ）の関連レコードを追加取得する。ペアの片方が `private` の場合は **ペア結合せず単体表示** とする（または 404 — 実装時に Step 3 で決定、推奨は単体表示）。
+**実装で追加した RPC（計画 3 本に加え）:**
+
+| 関数 | 用途 |
+| :--- | :--- |
+| `get_shared_pair_records(username, record_id, pair_id)` | ペアの関連記録取得（公開側のみ） |
+| `check_username_available(username, exclude_user_id)` | プロフィール設定時の username 一意性チェック |
+
+ペア表示時は、共有記録ページ側で `pair_id` があれば `get_shared_pair_records` で関連レコードを取得する。ペアの片方が `private` の場合は **ペア結合せず単体表示**（実装済み）。
 
 ### 4.4 既存ユーザー移行
 
-- 既存 `auth.users` に `profiles` 行がないユーザーは、ログイン後 `/onboarding/profile` へリダイレクト
-- `proxy.ts` で `/records` 保護時に `profiles` 存在チェックを追加
-- `username` 未設定の間は記録 CRUD は可能にするか、オンボーディング完了までブロックするか → **推奨: 閲覧・記録は可、共有ボタンのみ無効（username 必須）**
+- 既存 `auth.users` に `profiles` 行がないユーザーは、`/settings/profile` または `/onboarding/profile` からプロフィールを作成
+- **`/records` へのアクセスはブロックしない**（計画時の推奨どおり採用）
+- `username` 未設定の間は記録 CRUD は可能。**共有ボタンのみ非表示**（`shareUsername` が `null` のため）
+- `proxy.ts` は `/onboarding/profile` でプロフィール済みユーザーを `/settings/profile` へリダイレクトするのみ（`/records` 強制オンボーディングは **実装していない**）
 
 ---
 
@@ -359,7 +368,7 @@ src/app/
 │   └── profile/
 │       └── page.tsx        # プロフィール編集
 └── profile/
-    ├── layout.tsx          # 公開用レイアウト（Header 簡略化検討）
+    ├── layout.tsx          # PublicHeader を配置（ルート Header は非表示）
     └── [username]/
         ├── page.tsx
         ├── opengraph-image.tsx
@@ -368,6 +377,8 @@ src/app/
             └── opengraph-image.tsx
 
 src/components/
+├── layout/
+│   └── public-header.tsx           # 公開ページ用ヘッダー（認証状態で出し分け）
 ├── profiles/
 │   ├── profile-settings-form.tsx   # オンボーディング・設定で共用
 │   ├── profile-avatar-upload.tsx   # avatar_url 選択・プレビュー
@@ -388,9 +399,10 @@ src/components/
 | `src/proxy.ts` | rewrite + プロフィール未設定リダイレクト |
 | `src/components/records/edit-record-form.tsx` | 公開範囲 UI |
 | `src/components/records/record-detail.tsx` | 投稿者表示、`hidePlace`、共有向け props |
-| `src/components/records/timeline.tsx` | 共有ボタン（条件付き表示） |
+| `src/components/records/timeline.tsx` | 共有ボタン（条件付き表示）、公開プロフィールでは `showActions={false}` |
+| `src/components/layout/public-header.tsx` | 公開ページ用ヘッダー（§8.3） |
+| `src/components/header.tsx` | 公開パスでは `null` を返し `PublicHeader` に委譲。通常ページでは「プロフィール設定」リンク |
 | `src/app/layout.tsx` | `metadataBase`, title template |
-| `src/components/layout/header.tsx`（等） | 「プロフィール設定」リンク追加 |
 | 各 `page.tsx` の `metadata` | ページ別 OGP / robots（§7） |
 
 ### 6.3 Server Actions — revalidatePath
@@ -429,6 +441,8 @@ public/fonts/NotoSansJP-Regular.woff
 ```
 
 Vercel 本番ではファイルシステムからの読み込みが安定。Google Fonts CDN 直読みは OG 生成時のネットワーク依存になるため非推奨。
+
+**実装時のフォールバック:** `public/fonts/` にファイルが無い場合、`src/lib/metadata/og-fonts.ts` が jsDelivr の Noto Sans JP にフォールバックする。本番で CDN 依存を避ける場合は `public/fonts/NotoSansJP-Regular.woff` / `NotoSansJP-Bold.woff` を配置する。
 
 ### 7.3 ページ別メタデータ
 
@@ -555,11 +569,26 @@ export const metadata: Metadata = {
 
 ### 8.3 公開プロフィールページ
 
-- ヘッダー: `avatar_url`（またはプレースホルダー）、表示名、`@username`、bio（任意）
-- 本文: `public` 記録を `groupRecordsForTimeline` でペア表示
+#### ページ本文（プロフィールヘッダー + 記録一覧）
+
+- プロフィールヘッダー: `avatar_url`（またはプレースホルダー）、表示名、`@username`、bio（任意）
+- 本文: `public` 記録を `groupRecordsForTimeline` でペア表示（`Timeline` に `showActions={false}` を渡す）
 - 空状態: 「まだ公開されている記録はありません」
-- 認証不要。編集・削除ボタンなし
-- 本人がログイン中に自分の公開プロフィールを見た場合、ヘッダーに「プロフィールを編集」→ `/settings/profile` を表示（任意・推奨）
+- 認証不要。**本文は常に閲覧専用** — 記録の編集・削除ボタンなし。プロフィール編集ボタンも本文には置かない
+
+#### 公開ページ用ヘッダー（`PublicHeader`）
+
+ルート `src/components/header.tsx` は `/profile`・`/@` パスで `null` を返す。`profile/layout.tsx` が `PublicHeader`（Server Component）を描画する。
+
+| 閲覧者 | ヘッダー右側 | 備考 |
+| :--- | :--- | :--- |
+| 未ログイン | `ログイン`・`新規登録` | `ログイン` は `?next=現在のURL` 付き |
+| ログイン済み・他人のプロフィールまたは共有記録 | `タイムライン` のみ | `/records` へ戻る導線。ログアウトは通常ヘッダー側 |
+| ログイン済み・自分の `/@username` | `プロフィールを編集`・`タイムライン` | `プロフィールを編集` → `/settings/profile` |
+
+**判定方法:** `headers().get("x-pathname")` から username を抽出し、`supabase.auth.getUser()` と本人の `profiles.username` を照合。rewrite 後の内部パスではなく、ユーザー向け URL（`/@...`）が `x-pathname` に入る（`proxy.ts` で設定）。
+
+**設計意図:** 公開 URL は共有リンクの着地ページ。本文は誰が見ても同じ閲覧専用表示とし、本人向けの操作（プロフィール編集）はヘッダーに集約する。他人のページをログイン中に見たときに「ログイン」を出すと状態が矛盾するため、代わりに `タイムライン` のみを表示する。
 
 ### 8.4 記録共有ページ
 
@@ -588,7 +617,7 @@ export const metadata: Metadata = {
 | 導線 | 説明 |
 | :--- | :--- |
 | ヘッダー / アカウントメニュー | 「プロフィール設定」 |
-| 自分の公開プロフィール | 「プロフィールを編集」（本人のみ） |
+| 自分の公開プロフィール（`PublicHeader`） | 「プロフィールを編集」（本人かつ `/@username` 閲覧時のみ） |
 | オンボーディング | 初回のみ。完了後は `/settings/profile` へリダイレクト可 |
 
 `proxy.ts` の保護対象に `/settings/*` を追加する（未ログインは `/login` へ）。
@@ -663,66 +692,66 @@ export async function removeAvatar(): Promise<ActionResult>;
 
 ### Step 1: profiles 基盤（3.5〜4.5 人日）
 
-- [ ] `005_sharing_and_profiles.sql` — `profiles` テーブル + RLS
-- [ ] `src/lib/profiles/*` — 型、バリデーション、repository
-- [ ] `src/app/actions/profiles.ts` — create / update
-- [ ] `src/app/onboarding/profile/page.tsx` + フォーム
-- [ ] `proxy.ts` — プロフィール未設定時 `/onboarding/profile` へ（方針 §4.4 に従う）
-- [ ] `validate-username.test.ts`
+- [x] `005_sharing_and_profiles.sql` — `profiles` テーブル + RLS
+- [x] `src/lib/profiles/*` — 型、バリデーション、repository
+- [x] `src/app/actions/profiles.ts` — create / update
+- [x] `src/app/onboarding/profile/page.tsx` + フォーム
+- [x] `proxy.ts` — オンボーディング済みユーザーの `/settings/profile` リダイレクト（§4.4 の推奨方針）
+- [x] `validate-username.test.ts`
 
 ### Step 1b: プロフィール設定 + 画像（2.0〜3.0 人日）
 
-- [ ] Storage バケット `profile-images` + RLS ポリシー
-- [ ] `upload-avatar.ts` — リサイズ・WebP 化・アップロード
-- [ ] `profile-settings-form.tsx` / `profile-avatar-upload.tsx` / `username-field.tsx`
-- [ ] `src/app/settings/profile/page.tsx`
-- [ ] `updateProfile` / `checkUsernameAvailable` / `uploadAvatar` / `removeAvatar`
-- [ ] ヘッダーからの導線、公開プロフィールの「編集」リンク（本人のみ）
-- [ ] オンボーディングフォームを共用コンポーネントにリファクタ
-- [ ] `upload-avatar.test.ts`（MIME・サイズバリデーション）
+- [x] Storage バケット `profile-images` + RLS ポリシー
+- [x] `upload-avatar.ts` — リサイズ・WebP 化・アップロード
+- [x] `profile-settings-form.tsx` / `profile-avatar-upload.tsx` / `username-field.tsx`
+- [x] `src/app/settings/profile/page.tsx`
+- [x] `updateProfile` / `checkUsernameAvailable` / `uploadAvatar` / `removeAvatar`
+- [x] ヘッダーからの導線、公開プロフィールの「編集」リンク（本人のみ・`PublicHeader`）
+- [x] オンボーディングフォームを共用コンポーネントにリファクタ（`ProfileSettingsForm`）
+- [x] `upload-avatar.test.ts`（MIME・サイズバリデーション）
 
 ### Step 2: visibility + RPC（2.5〜3.5 人日）
 
-- [ ] マイグレーション — `visibility`, `hide_place_when_shared`
-- [ ] RPC 3 本 + GRANT
-- [ ] `src/lib/types/record.ts` 更新
-- [ ] `src/lib/sharing/fetch-shared.ts`
-- [ ] `repository.ts` / `parse-form.ts` / `actions/records.ts` 更新
-- [ ] 手動 SQL テスト（private → 空、public → 取得可）
+- [x] マイグレーション — `visibility`, `hide_place_when_shared`
+- [x] RPC 5 本 + GRANT（`get_shared_pair_records`, `check_username_available` 含む）
+- [x] `src/lib/types/record.ts` 更新
+- [x] `src/lib/sharing/fetch-shared.ts`
+- [x] `repository.ts` / `parse-form.ts` / `actions/records.ts` 更新
+- [ ] 手動 SQL テスト（private → 空、public → 取得可）— 各環境で実施
 
 ### Step 3: 公開ページ（3.5〜4.5 人日）
 
-- [ ] `proxy.ts` — `/@` rewrite
-- [ ] `src/app/profile/layout.tsx`
-- [ ] `profile/[username]/page.tsx` — 一覧
-- [ ] `profile/[username]/[id]/page.tsx` — 共有記録 + ペア
-- [ ] `record-detail.tsx` — 投稿者・場所マスク対応
-- [ ] `revalidatePath` 配線
+- [x] `proxy.ts` — `/@` rewrite
+- [x] `src/app/profile/layout.tsx` + `public-header.tsx`
+- [x] `profile/[username]/page.tsx` — 一覧（`showActions={false}`）
+- [x] `profile/[username]/[id]/page.tsx` — 共有記録 + ペア
+- [x] `record-detail.tsx` — 投稿者・場所マスク対応
+- [x] `revalidatePath` 配線
 
 ### Step 4: 動的 OGP（2.5〜3.5 人日）
 
-- [ ] `npm install @vercel/og`
-- [ ] `public/fonts/` — Noto Sans JP
-- [ ] `src/lib/metadata/*`
-- [ ] `layout.tsx` — `metadataBase` + title template
-- [ ] `opengraph-image.tsx` × 2（記録・プロフィール）
-- [ ] `generateMetadata` × 2
-- [ ] 既存ページ — `robots` / 静的 OGP 整備
+- [x] `npm install @vercel/og`（`sharp` も追加）
+- [ ] `public/fonts/` — Noto Sans JP（CDN フォールバックで動作。配置は任意）
+- [x] `src/lib/metadata/*`
+- [x] `layout.tsx` — `metadataBase` + title template
+- [x] `opengraph-image.tsx` × 2（記録・プロフィール）
+- [x] `generateMetadata` × 2
+- [x] 既存ページ — `robots` / 静的 OGP 整備
 - [ ] 本番 OG 検証
 
 ### Step 5: 編集・共有 UI（2.0〜2.5 人日）
 
-- [ ] `visibility-selector.tsx`
-- [ ] `edit-record-form.tsx` 統合
-- [ ] `share-button.tsx` + `build-share-text.ts`
-- [ ] `timeline.tsx` 統合
+- [x] `visibility-selector.tsx`
+- [x] `edit-record-form.tsx` 統合
+- [x] `share-button.tsx` + `build-share-text.ts`
+- [x] `timeline.tsx` 統合
 
 ### Step 6: 仕上げ（1.5〜2.0 人日）
 
-- [ ] 手動 QA — visibility × ペア × 場所マスク × OGP
-- [ ] `Sakemem_Context.md` ロードマップ更新（Step 11）
-- [ ] `.env.example` コメント追記（`NEXT_PUBLIC_SITE_URL` の本番必須化）
-- [ ] CI `npm test` / `npm run build` 通過
+- [ ] 手動 QA — visibility × ペア × 場所マスク × OGP（各環境で実施）
+- [x] `Sakemem_Context.md` ロードマップ更新（Step 11）
+- [x] `.env.example` コメント追記（`NEXT_PUBLIC_SITE_URL` の共有・OGP 必須化）
+- [x] CI `npm test`（26 件）/ `npm run build` / `npm run lint` 通過
 
 ---
 
@@ -730,7 +759,8 @@ export async function removeAvatar(): Promise<ActionResult>;
 
 | 種別 | 対象 |
 | :--- | :--- |
-| 単体 | `validate-username`, `build-share-url`, `build-share-text`, `mask-record`, `upload-avatar` |
+| 単体 | `validate-username`, `build-share-url`, `mask-record`, `upload-avatar` |
+| 単体（未追加） | `build-share-text` — 初版では手動 QA でカバー |
 | 単体（既存パターン） | `groupRecordsForTimeline` — 公開記録のペア結合 |
 | 手動 | RPC + 各 visibility、OG 画像の日本語、X intent、プロフィール画像アップロード・username 変更 |
 | E2E | 初版では省略（Vitest のみ） |
@@ -757,15 +787,18 @@ CREATE TABLE public.friendships (...);
 
 ## 13. 未決定事項（実装着手前に 1 回だけ確認）
 
-| 項目 | 推奨（本計画の前提） |
+**すべて実装時に確定済み（2026-06-28）。**
+
+| 項目 | 採用した方針 |
 | :--- | :--- |
 | ペアの片方が `private` のとき | 共有対象レコードのみ単体表示 |
 | プロフィール一覧の件数上限 | 50 件 + 「もっと見る」は初版なし |
-| オンボーディング強制度 | 記録は可、共有は username 必須 |
+| オンボーディング強制度 | 記録は可、共有は username 必須（`/records` はブロックしない） |
 | `username` 変更 | 旧 URL は 404（リダイレクトなし） |
 | `avatar_url` 未設定時 | 表示名頭文字のプレースホルダー |
 | `unlisted` の検索エンジン | `noindex` |
-| 公開プロフィールの Header | ログインリンクのみの簡易ヘッダー |
+| 公開プロフィールの Header | `PublicHeader` — 未ログインは `ログイン` + `新規登録`、他人閲覧時は `タイムライン` のみ、本人のプロフィール閲覧時は `プロフィールを編集` + `タイムライン`（§8.3） |
+| OG フォント | `public/fonts/` 未配置時は jsDelivr CDN フォールバック |
 
 ---
 
@@ -776,8 +809,81 @@ CREATE TABLE public.friendships (...);
 | [sharing-feature.md](./sharing-feature.md) | 背景、アンケート、Phase A/B の議論、方針の歴史 |
 | **本書** | 確定スコープ・DB・画面・OGP・手順・工数 |
 | [performance-improvement.md](./performance-improvement.md) | プライベート領域の SPA 風化（共有ページと共存） |
-| [Sakemem_Context.md](../Sakemem_Context.md) | プロジェクト全体の正本（実装後に Step 11 として追記） |
+| [Sakemem_Context.md](../Sakemem_Context.md) | プロジェクト全体の正本（Step 11 として共有機能を追記済み） |
 
 ---
 
-*実装着手時は Step 1 から順に進め、各 Step 完了時にチェックリストを更新すること。*
+## 15. ローカル開発での動作確認
+
+本プロジェクトは **リモート Supabase プロジェクト** に接続する構成（ローカル Docker スタックは必須ではない）。`npm run dev` で共有機能を試す手順。
+
+### 15.1 前提
+
+```bash
+npm install
+cp .env.example .env.local   # 既にある場合は内容を確認
+```
+
+| 変数 | ローカルでの値 |
+| :--- | :--- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 同上 anon key |
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000`（共有 URL・OGP に必須） |
+
+### 15.2 データベース
+
+共有機能には **`005_sharing_and_profiles.sql` の適用が必須**。
+
+- **既に 001〜004 適用済み:** SQL Editor で `005` のみ実行
+- **新規 DB:** `001` → `002` → `003` → `004` → `005` の順
+
+```bash
+# CLI を使う場合（プロジェクト link 済み）
+supabase db push
+```
+
+適用後の確認: `profiles` テーブル、`records.visibility` 列、Storage バケット `profile-images`。
+
+### 15.3 Supabase Auth
+
+Dashboard → **Authentication → URL Configuration**:
+
+| 項目 | 値 |
+| :--- | :--- |
+| Site URL | `http://localhost:3000` |
+| Redirect URLs | `http://localhost:3000/auth/callback` |
+
+開発を簡略化する場合、**Authentication → Providers → Email** で「Confirm email」をオフにすると即ログインできる。
+
+### 15.4 開発サーバー起動
+
+```bash
+npm run dev
+```
+
+[http://localhost:3000](http://localhost:3000) を開く。
+
+### 15.5 確認フロー
+
+1. `/login` でログイン（または `/signup` で新規登録）
+2. **プロフィール作成** — `/onboarding/profile` または `/settings/profile`（username: 英数字・`_`・`-` の 3〜30 文字）
+3. **記録の公開** — 編集画面で `unlisted` / `public` に変更
+4. **共有ボタン** — タイムラインに表示（username 設定済みかつ `unlisted` / `public` のとき）
+5. **公開ページ** — シークレットウィンドウで確認:
+   - `http://localhost:3000/@{username}` — `public` 記録のみ
+   - `http://localhost:3000/@{username}/{記録ID}` — `unlisted` / `public`
+6. **OG 画像（任意）** — `http://localhost:3000/@{username}/opengraph-image`
+
+### 15.6 よくあるつまずき
+
+| 症状 | 対処 |
+| :--- | :--- |
+| プロフィール保存でエラー | `005` マイグレーション未適用 |
+| 共有ボタンが出ない | username 未設定、または `visibility` が `private` |
+| `/@username/...` が 404 | 記録が `private`、または username / ID の不一致 |
+| ログイン後リダイレクト失敗 | Redirect URLs に `http://localhost:3000/auth/callback` が無い |
+| 画像アップロード失敗 | `profile-images` バケット未作成（`005` で作成） |
+
+---
+
+*Phase A の実装は完了。デプロイ時は §7.8 の OG 検証と各環境への `005` 適用を忘れないこと。*

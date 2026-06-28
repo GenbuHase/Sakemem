@@ -13,9 +13,11 @@
 | :--- | :--- |
 | **Frontend** | Next.js 16（App Router）、React 19、Tailwind CSS 4 |
 | **Backend / API** | Next.js Server Actions、Route Handlers（`/api/sakenowa/suggest`） |
-| **認証ルーティング** | `src/proxy.ts`（Next.js 16 の Proxy。セッション更新と `/records` 保護） |
+| **認証ルーティング** | `src/proxy.ts`（Next.js 16 の Proxy。セッション更新、`/records`・`/settings`・`/onboarding` 保護、`/@username` rewrite） |
 | **Database / Auth** | Supabase（PostgreSQL + Supabase Auth、`@supabase/ssr`） |
 | **External API** | [さけのわAPI](https://sakenowa.com)（日本酒選択時の銘柄・蔵元サジェスト） |
+| **OG 画像** | `@vercel/og`（共有ページの動的 OG 画像生成） |
+| **画像処理** | `sharp`（プロフィール画像のリサイズ・WebP 化） |
 | **テスト** | Vitest（`npm test`） |
 | **CI** | GitHub Actions（lint → test → build） |
 
@@ -43,6 +45,7 @@
 7. **分析 UI:** フィルタ未適用時、タイムライン上部に記録数・お酒/おつまみ件数・ペア記録数、およびカテゴリ別の件数・平均評価を表示する。
 8. **動的評価軸:** `category`（および酒類の場合は `style`）に応じて、`flavor_metrics`（jsonb）内の評価パラメータを動的に切り替える（定義は `src/lib/constants/flavor-metrics.ts`・`src/lib/constants/drink-styles.ts` 参照）。総合評価（`rating`）は任意入力。ワイン・ウイスキーは種類ごとに評価軸が変わる。
 9. **セキュリティ:** Supabase の Row Level Security（RLS）を有効化し、`auth.uid() = user_id` のポリシーを設定。他人のデータは閲覧・改ざんできないようにする。
+10. **共有（Phase A）:** 記録ごとに公開範囲（`private` / `unlisted` / `public`）を設定可能。公開プロフィール `/@username` と記録共有ページ `/@username/[id]` を SSR で提供。外部共有（URL コピー、X intent、Web Share API）と動的 OGP。アプリ内 SNS（フォロー・フィード）は Phase B として未実装。詳細は [docs/sharing-feature.md](./docs/sharing-feature.md) を参照。
 
 ## 4. データベース設計（Supabase / PostgreSQL）
 
@@ -64,8 +67,24 @@
 | `rating` | integer | CHECK（`NULL` または 1〜5） | 1〜5 の5段階評価（任意） |
 | `flavor_metrics` | jsonb | default: `'{}'::jsonb` | カテゴリ特有の評価軸を KV で格納 |
 | `comment` | text | | メモ・感想 |
+| `visibility` | text | NOT NULL, default: `'private'`, CHECK（`private` / `unlisted` / `public`） | 公開範囲 |
+| `hide_place_when_shared` | boolean | NOT NULL, default: `false` | 共有時に `place` を非表示にする |
 
-**インデックス:** `(user_id, date DESC, created_at DESC)`、`pair_id`（`WHERE pair_id IS NOT NULL`）
+**インデックス:** `(user_id, date DESC, created_at DESC)`、`pair_id`（`WHERE pair_id IS NOT NULL`）、`(user_id, date DESC, created_at DESC) WHERE visibility = 'public'`
+
+### `profiles` テーブル
+
+| カラム名 | 型 | 制約 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `id` | uuid | PRIMARY KEY, REFERENCES `auth.users(id)` ON DELETE CASCADE | ユーザー ID（`auth.users` と 1:1） |
+| `username` | text | NOT NULL, UNIQUE（`lower(username)`）, CHECK（3〜30 文字・`[a-zA-Z0-9_-]`） | 公開 URL 用（`/@username`） |
+| `display_name` | text | NOT NULL | 表示名 |
+| `avatar_url` | text | | プロフィール画像 URL（Storage `profile-images`） |
+| `bio` | text | | 自己紹介 |
+| `created_at` | timestamptz | NOT NULL, default: `now()` | 作成日時 |
+| `updated_at` | timestamptz | NOT NULL, default: `now()` | 更新日時 |
+
+**公開データ取得:** `anon` に `records` へ広い SELECT を付けず、SECURITY DEFINER RPC（`get_shared_record`, `get_public_profile`, `get_public_profile_records`, `get_shared_pair_records`）で公開フィールドのみ返す。
 
 ### カテゴリ一覧（`category`）
 
@@ -125,31 +144,46 @@
 | `/auth/callback` | Supabase Auth コールバック |
 | `/records` | タイムライン・検索・分析 |
 | `/records/new` | 新規記録フォーム |
-| `/records/[id]/edit` | 記録編集・ペアリング管理・削除 |
+| `/records/[id]/edit` | 記録編集・ペアリング管理・削除・公開範囲設定 |
+| `/onboarding/profile` | 初回プロフィール設定（username 必須） |
+| `/settings/profile` | プロフィール編集（username / 表示名 / 画像 / bio） |
+| `/@{username}` | 公開プロフィール（内部: `/profile/[username]`。`public` 記録のみ） |
+| `/@{username}/{id}` | 記録共有ページ（`unlisted` / `public`。閲覧専用） |
 | `/api/sakenowa/suggest` | さけのわ API プロキシ（`?q=`） |
+
+`/@username` 形式は `src/proxy.ts`（middleware）が `/profile/[username]` へ rewrite する。公開ページは SSR + `generateMetadata` + `opengraph-image.tsx`。
 
 ### 主要なコード配置
 
 ```
 src/
 ├── app/
-│   ├── actions/          # Server Actions（auth, records）
+│   ├── actions/          # Server Actions（auth, records, profiles）
 │   ├── api/sakenowa/     # さけのわサジェスト API
 │   ├── auth/callback/    # 認証コールバック
 │   ├── login, signup/    # 認証ページ
+│   ├── onboarding/profile/  # 初回プロフィール設定
+│   ├── settings/profile/    # プロフィール編集
+│   ├── profile/[username]/  # 公開プロフィール・共有記録（SSR）
 │   └── records/          # タイムライン・新規・編集
 ├── components/
 │   ├── auth/             # 認証フォーム
+│   ├── layout/           # PublicHeader（公開ページ用）
+│   ├── profiles/         # プロフィール設定フォーム・アバター
 │   ├── records/          # 記録 UI（フォーム、タイムライン、フィルタ、分析）
+│   ├── sharing/          # 共有ボタン・公開範囲セレクタ
 │   └── ui/               # 共通 UI プリミティブ
 ├── lib/
 │   ├── auth/             # requireUser 等
 │   ├── constants/        # カテゴリ・種類・評価軸定義
+│   ├── metadata/         # OGP メタデータ・フォント読み込み
+│   ├── profiles/         # プロフィール CRUD・画像アップロード
 │   ├── records/          # ドメインロジック（フィルタ、分析、ペアリング、リポジトリ）
+│   ├── sharing/          # 共有 URL・RPC ラッパー・place マスク
 │   ├── sakenowa/         # さけのわ API クライアント
 │   ├── supabase/         # Supabase クライアント・セッション
 │   └── types/            # 型定義
-└── proxy.ts              # 認証セッション更新・保護ルート
+└── proxy.ts              # セッション更新・保護ルート・/@username rewrite
 ```
 
 ## 6. 開発ロードマップ
@@ -166,13 +200,15 @@ src/
 | Step 8 | 蔵元/メーカー（`producer`）・飲食場所（`place`）フィールド追加 | ✅ 完了 |
 | Step 9 | 酒類の種類（`style`）フィールド追加、カテゴリ別種類セレクト・種類別評価軸 | ✅ 完了 |
 | Step 10 | パフォーマンス改善（タイムラインのクライアントサイド移行、即時ローディング遷移の導入） | ✅ 完了 |
+| Step 11 | 共有機能 Phase A（プロフィール、公開範囲、公開ページ、動的 OGP、共有 UI） | ✅ 完了 |
 
-**現状:** MVP 機能およびパフォーマンス改善に対応完了（`alpha-0.3.10`）。今後は共有機能などの実装を検討する段階。
+**現状:** MVP・パフォーマンス改善に加え、共有機能 Phase A まで実装済み（`alpha-0.3.11`）。Phase B（フォロー・フィード等）は未着手。各環境への `005_sharing_and_profiles.sql` 適用と本番 OG 検証はデプロイ時に実施。
 
 ### 関連ファイル
 
-- **マイグレーション:** `supabase/migrations/001_create_records.sql`, `supabase/migrations/002_add_producer_and_place.sql`, `supabase/migrations/003_add_style.sql`, `supabase/migrations/004_reorder_style_column.sql`
+- **マイグレーション:** `supabase/migrations/001_create_records.sql` 〜 `005_sharing_and_profiles.sql`
+- **共有機能ドキュメント:** `docs/sharing-feature.md`, `docs/sharing-implementation-plan.md`
 - **環境変数テンプレート:** `.env.example`
-- **セットアップ・デプロイ手順:** `README.md`
+- **セットアップ・デプロイ手順:** `README.md`（ローカル確認は implementation-plan §15）
 - **CI:** `.github/workflows/ci.yml`
-- **テスト:** `src/lib/records/*.test.ts`（`analyze-records`, `filter-records`, `group-timeline`, `pairing`）、`src/lib/constants/drink-styles.test.ts`
+- **テスト:** `src/lib/records/*.test.ts`、`src/lib/profiles/*.test.ts`、`src/lib/sharing/build-share-url.test.ts`、`src/lib/constants/drink-styles.test.ts`

@@ -1,8 +1,8 @@
 # Sakemem 共有機能 — 設計メモ
 
 > 作成日: 2026-06-07  
-> 更新日: 2026-06-28  
-> ステータス: 方針確定・実装待ち  
+> 更新日: 2026-06-28（Phase A 実装完了・ローカル確認手順を追記）  
+> ステータス: Phase A 実装済み（本番 DB への `005` 適用・本番 OG 検証は環境依存）  
 > 関連: [sharing-implementation-plan.md](./sharing-implementation-plan.md)（**本実装計画・手順書**）、[Sakemem_Context.md](../Sakemem_Context.md)、[performance-improvement.md](./performance-improvement.md)
 
 **実装の詳細（DB・画面・OGP・工数・チェックリスト）は [sharing-implementation-plan.md](./sharing-implementation-plan.md) を参照。** 本書は背景・方針・議論の経緯を残す設計メモである。
@@ -33,7 +33,7 @@ Sakemem を「SNS」にするのではなく、**信頼できる人の晩酌ノ�
 
 | フェーズ | 内容 | 規模感 |
 | :--- | :--- | :--- |
-| **Phase A（近い将来）** | 記録の外部共有（Twitter 等に投げられる形式）、公開プロフィールページ | 中 |
+| **Phase A（実装済み）** | 記録の外部共有（Twitter 等に投げられる形式）、公開プロフィールページ | 中 |
 | **Phase B（将来）** | Sakemem 内フォロー / フレンド、フィード、おすすめ集約 | 大 |
 
 **今回実装するのは Phase A のみ。** Twitter 等の SNS にそのまま貼れる形式での共有を優先する。**Sakemem 自体に SNS 機能（フォロー・フィード等）は持たせない。** アプリ内ソーシャルグラフは Phase B として別途設計・実装する。
@@ -210,8 +210,9 @@ SQL 全文は [sharing-implementation-plan.md](./sharing-implementation-plan.md)
 | :--- | :--- |
 | 記録編集画面 | 公開範囲セレクタ、`hide_place_when_shared` チェック |
 | 記録詳細 / タイムライン | 「共有」ボタン → URL コピー / X intent |
-| `/@[username]` | プロフィール画像・表示名・bio・公開記録一覧（ペアカード） |
+| `/@[username]` | プロフィール画像・表示名・bio・公開記録一覧（ペアカード）。**本文は常に閲覧専用** |
 | `/@[username]/[id]` | 共有専用レイアウト（`RecordDetail` `showActions={false}`） |
+| 公開ページ共通ヘッダー | `PublicHeader` — 認証状態に応じて出し分け（§4.10） |
 | 新規登録後 / 既存ユーザー初回ログイン | `profiles` 作成フロー（`username` 必須）。記録は可、共有は username 設定後 |
 | `/settings/profile` | プロフィール編集（`username` / `display_name` / `avatar_url` / `bio`）— §4.9 |
 
@@ -235,6 +236,7 @@ src/app/profile/[username]/[id]/      # 共有記録 + opengraph-image.tsx
 src/app/onboarding/profile/           # 初回プロフィール設定
 src/app/settings/profile/             # プロフィール編集
 src/components/profiles/              # 設定フォーム・アバターアップロード
+src/components/layout/public-header.tsx  # 公開ページ用ヘッダー（認証状態で出し分け）
 src/proxy.ts                          # /@username → /profile/username へ rewrite
 supabase/migrations/005_sharing_and_profiles.sql
 ```
@@ -314,6 +316,38 @@ supabase/migrations/005_sharing_and_profiles.sql
 | 画像アップロード | 署名付き URL または Server Action 経由で Storage に PUT → 返却 URL を `avatar_url` に保存 |
 | 公開面 | 既存 RPC `get_public_profile` 等が `avatar_url` を返す |
 
+### 4.10 公開ページのヘッダーと閲覧専用 UI（2026-06-28 確定）
+
+公開 URL（`/@username`、`/@username/[id]`）は **共有リンクの着地ページ** として設計する。SNS の他人プロフィールではなく、信頼できる人の晩酌ノートの抜粋を見せる場所である。
+
+#### 4.10.1 ページ本文（常に閲覧専用）
+
+| 要素 | 方針 |
+| :--- | :--- |
+| 記録の編集・削除 | **常に非表示**（`Timeline` / `RecordDetail` で `showActions={false}`） |
+| プロフィール編集ボタン（本文） | **置かない**（ヘッダーに集約） |
+| 共有ボタン | 公開ページ本文には出さない（本人の `/records` タイムライン側の責務） |
+
+本人がログイン中に自分の `/@username` を開いても、本文は他人から見えるのと同じ閲覧専用表示とする。「他人からどう見えるか」の確認と、設定変更の導線はヘッダーで分離する。
+
+#### 4.10.2 ヘッダー構成
+
+ルート `Header`（`/records` 等）は公開パスでは非表示とし、`profile/layout.tsx` の **`PublicHeader`**（Server Component）が認証状態を反映する。
+
+| 閲覧者 | ヘッダー右側 |
+| :--- | :--- |
+| **未ログイン** | `ログイン`（`?next=現在のURL` 付き）・`新規登録` |
+| **ログイン済み・他人のプロフィールまたは共有記録** | `タイムライン` のみ（`/records` へ戻る導線） |
+| **ログイン済み・自分の `/@username`** | `プロフィールを編集`（`/settings/profile`）・`タイムライン` |
+
+**意図:**
+
+- 未ログイン訪問者にはアカウント作成・ログインの導線を示す。ログイン後は `next` で同じ公開ページに戻れる。
+- ログイン済みで他人のページを見ているとき、「ログイン」は誤表示になるため出さない。代わりに自分のアプリへ戻る `タイムライン` のみを置く（ログアウトは通常ヘッダー側）。
+- 本人が自分の公開プロフィールをプレビューするときだけ、ヘッダーに `プロフィールを編集` を出す。共有記録ページ（`/@username/[id]`）では文脈に合わず出さない。
+
+**実装:** `src/components/layout/public-header.tsx` — `headers().get("x-pathname")` と `supabase.auth.getUser()` で判定。`proxy.ts` の rewrite 時は元 URL（`/@...` 形式）が `x-pathname` に入る。
+
 ## 5. Phase B: アプリ内フォロー（将来・大規模）
 
 アンケートの「身近なユーザーのおすすめ」に直結するが、Phase A 完了後に着手する。
@@ -347,16 +381,16 @@ supabase/migrations/005_sharing_and_profiles.sql
 
 Phase A の実装ステップ（チェックリスト付き）は [sharing-implementation-plan.md](./sharing-implementation-plan.md) §10 を正とする。
 
-| Step | 内容 | 依存 |
-| :--- | :--- | :--- |
-| Step 1 | `profiles`、オンボーディング、`username` バリデーション | — |
-| Step 1b | プロフィール設定画面、`avatar_url` Storage、プロフィール更新 Action | Step 1 |
-| Step 2 | `visibility`、SECURITY DEFINER RPC | Step 1 |
-| Step 3 | 公開プロフィール・共有記録ページ、`proxy.ts` rewrite | Step 2 |
-| Step 4 | 動的 OGP（`generateMetadata` + `opengraph-image.tsx`） | Step 3 |
-| Step 5 | 編集 UI（公開範囲）、共有ボタン | Step 4 |
-| Step 6 | QA・ドキュメント・本番 OG 検証 | Step 5 |
-| Phase B | フォロー、フィード、おすすめ集約 | Phase A 完了後 |
+| Step | 内容 | 依存 | 状態 |
+| :--- | :--- | :--- | :---: |
+| Step 1 | `profiles`、オンボーディング、`username` バリデーション | — | ✅ |
+| Step 1b | プロフィール設定画面、`avatar_url` Storage、プロフィール更新 Action | Step 1 | ✅ |
+| Step 2 | `visibility`、SECURITY DEFINER RPC | Step 1 | ✅ |
+| Step 3 | 公開プロフィール・共有記録ページ、`proxy.ts` rewrite | Step 2 | ✅ |
+| Step 4 | 動的 OGP（`generateMetadata` + `opengraph-image.tsx`） | Step 3 | ✅ |
+| Step 5 | 編集 UI（公開範囲）、共有ボタン | Step 4 | ✅ |
+| Step 6 | QA・ドキュメント・本番 OG 検証 | Step 5 | 一部（本番 OG・手動 QA は環境依存） |
+| Phase B | フォロー、フィード、おすすめ集約 | Phase A 完了後 | 未着手 |
 
 ## 8. 決定事項・残課題
 
@@ -370,11 +404,20 @@ Phase A の実装ステップ（チェックリスト付き）は [sharing-imple
 - [x] アプリ内 SNS: **Phase A では実装しない**
 - [x] `friends` visibility: **Phase A では DB にも入れない**
 - [x] プロフィール一覧の件数上限: **50 件**（初版はページネーションなし）
+- [x] 公開ページ本文: **常に閲覧専用**（記録の編集・削除なし。`Timeline` は `showActions={false}`）
+- [x] 公開ページヘッダー: **`PublicHeader` で認証状態を反映**（§4.10）。未ログインは `ログイン` + `新規登録`、他人閲覧時は `タイムライン` のみ、本人のプロフィール閲覧時は `プロフィールを編集` + `タイムライン`
 
-### 実装着手前に最終確認（軽微）
+### 実装時の確定事項（2026-06-28）
 
-- [ ] ペアの片方が `private` のとき、共有ページで単体表示とするか 404 とするか（推奨: 単体表示）
-- [ ] 公開プロフィールの Header デザイン（ログインリンクのみの簡易ヘッダー推奨）
+- [x] ペアの片方が `private` のとき、共有ページでは **単体表示**（404 にしない）
+- [x] オンボーディング強制度: `/records` はブロックせず、**共有ボタンのみ username 必須**
+- [x] OG フォント: `public/fonts/` 未配置時は **jsDelivr CDN にフォールバック**（`src/lib/metadata/og-fonts.ts`）
+
+### 環境依存の残作業
+
+- [ ] 各環境の Supabase DB へ `005_sharing_and_profiles.sql` を適用
+- [ ] 本番 `NEXT_PUBLIC_SITE_URL` の設定と OG 検証（X Card Validator 等）
+- [ ] （任意）`public/fonts/NotoSansJP-*.woff` を配置して CDN 依存を解消
 
 ## 9. 参考: アンケートニーズと機能の対応
 
@@ -394,8 +437,17 @@ Phase A の実装ステップ（チェックリスト付き）は [sharing-imple
 | **本書（sharing-feature.md）** | 背景、アンケート、Phase A/B の議論、方針の経緯 |
 | [sharing-implementation-plan.md](./sharing-implementation-plan.md) | 確定スコープ、DB・RPC・画面・動的 OGP・手順・工数 |
 | [performance-improvement.md](./performance-improvement.md) | プライベート領域の SPA 風化（共有ページの SSR と共存） |
-| [Sakemem_Context.md](../Sakemem_Context.md) | プロジェクト全体の正本（実装完了後に Step 11 として追記） |
+| [Sakemem_Context.md](../Sakemem_Context.md) | プロジェクト全体の正本（Step 11 として共有機能を追記済み） |
+
+## 11. ローカルでの動作確認
+
+`npm run dev` で共有機能を試す手順の詳細は [sharing-implementation-plan.md](./sharing-implementation-plan.md) §15 を参照。要点のみ:
+
+1. `.env.local` に Supabase 3 変数 + `NEXT_PUBLIC_SITE_URL=http://localhost:3000`
+2. Supabase に `005_sharing_and_profiles.sql` を適用（既存 DB なら `005` のみで可）
+3. Supabase Auth の Redirect URLs に `http://localhost:3000/auth/callback` を登録
+4. ログイン → プロフィール設定 → 記録の公開範囲変更 → `http://localhost:3000/@{username}/{id}` で確認
 
 ---
 
-*実装着手時は [sharing-implementation-plan.md](./sharing-implementation-plan.md) の Step 1 から進めること。*
+*Phase A の実装は完了。変更・デプロイ時は [sharing-implementation-plan.md](./sharing-implementation-plan.md) のチェックリストと §15 を参照すること。*
