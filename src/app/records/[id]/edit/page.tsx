@@ -12,6 +12,7 @@ type EditRecordPageProps = {
 
 export const metadata: Metadata = {
   title: "記録を編集 | Sakemem",
+  robots: { index: false, follow: false },
 };
 
 export default async function EditRecordPage({ params }: EditRecordPageProps) {

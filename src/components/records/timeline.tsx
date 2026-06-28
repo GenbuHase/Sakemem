@@ -1,4 +1,5 @@
 import type { TimelineEntry } from "@/lib/records/group-timeline";
+import type { SakememRecord } from "@/lib/types/record";
 import { formatRecordDate } from "@/lib/utils/date";
 import { LinkButton } from "@/components/ui/button";
 import { RecordDetail } from "./record-detail";
@@ -6,9 +7,21 @@ import { RecordDetail } from "./record-detail";
 type TimelineProps = {
   entries: TimelineEntry[];
   filtered?: boolean;
+  shareUsername?: string | null;
 };
 
-export function Timeline({ entries, filtered = false }: TimelineProps) {
+function getPairRecordsForEntry(entry: TimelineEntry): SakememRecord[] {
+  if (entry.kind === "paired") {
+    return [...entry.drinks, ...entry.foods];
+  }
+  return [entry.record];
+}
+
+export function Timeline({
+  entries,
+  filtered = false,
+  shareUsername = null,
+}: TimelineProps) {
   if (entries.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
@@ -44,7 +57,11 @@ export function Timeline({ entries, filtered = false }: TimelineProps) {
 
           {entry.kind === "single" ? (
             <div className="grid gap-3 md:grid-cols-2">
-              <RecordDetail record={entry.record} />
+              <RecordDetail
+                record={entry.record}
+                shareUsername={shareUsername}
+                pairRecords={getPairRecordsForEntry(entry)}
+              />
             </div>
           ) : (
             <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80">
@@ -58,10 +75,22 @@ export function Timeline({ entries, filtered = false }: TimelineProps) {
               </div>
               <div className="grid gap-3 p-3 md:grid-cols-2">
                 {entry.drinks.map((record) => (
-                  <RecordDetail key={record.id} record={record} nested />
+                  <RecordDetail
+                    key={record.id}
+                    record={record}
+                    nested
+                    shareUsername={shareUsername}
+                    pairRecords={getPairRecordsForEntry(entry)}
+                  />
                 ))}
                 {entry.foods.map((record) => (
-                  <RecordDetail key={record.id} record={record} nested />
+                  <RecordDetail
+                    key={record.id}
+                    record={record}
+                    nested
+                    shareUsername={shareUsername}
+                    pairRecords={getPairRecordsForEntry(entry)}
+                  />
                 ))}
               </div>
             </div>

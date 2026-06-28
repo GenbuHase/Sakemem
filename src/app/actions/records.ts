@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/require-user";
+import { fetchProfileByUserId } from "@/lib/profiles/repository";
 import { isFoodCategory } from "@/lib/constants/categories";
 import {
   parseRecordCategory,
@@ -41,7 +42,23 @@ export type RecordPairingContext = {
 
 const RECORDS_PATH = "/records";
 
-function revalidateRecord(id?: string): void {
+async function revalidateSharedRecord(
+  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createClient>>,
+  userId: string,
+  recordId: string,
+): Promise<void> {
+  const profile = await fetchProfileByUserId(supabase, userId);
+  if (!profile) return;
+
+  revalidatePath(`/@${profile.username}`);
+  revalidatePath(`/@${profile.username}/${recordId}`);
+  revalidatePath(`/profile/${profile.username}`);
+  revalidatePath(`/profile/${profile.username}/${recordId}`);
+}
+
+function revalidateRecord(
+  id?: string,
+): void {
   revalidatePath(RECORDS_PATH);
   if (id) {
     revalidatePath(`${RECORDS_PATH}/${id}/edit`);
@@ -160,7 +177,7 @@ export async function updateRecord(
   _prevState: RecordActionState | null,
   formData: FormData,
 ): Promise<RecordActionState> {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   const id = parseString(formData, "id");
   const date = parseString(formData, "date");
@@ -187,6 +204,7 @@ export async function updateRecord(
         name,
       }),
     );
+    await revalidateSharedRecord(supabase, user.id, id);
   } catch (error) {
     return toErrorState(error, "記録の更新に失敗しました。");
   }
@@ -276,7 +294,7 @@ export async function linkRecordPair(
 }
 
 export async function deleteRecord(id: string): Promise<void> {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   const record = await fetchRecordById(supabase, id);
   if (!record) {
@@ -289,5 +307,6 @@ export async function deleteRecord(id: string): Promise<void> {
     await clearOrphanedPair(supabase, record.pair_id);
   }
 
+  await revalidateSharedRecord(supabase, user.id, id);
   revalidateRecord();
 }

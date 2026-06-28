@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { FlavorMetrics, RecordCategory, SakememRecord } from "@/lib/types/record";
 
+import type { RecordVisibility } from "@/lib/types/record";
+
 export type RecordWritePayload = {
   date: string;
   category: RecordCategory;
@@ -12,6 +14,8 @@ export type RecordWritePayload = {
   rating: number | null;
   flavor_metrics: FlavorMetrics;
   comment: string | null;
+  visibility: RecordVisibility;
+  hide_place_when_shared: boolean;
 };
 
 export type RecordInsert = RecordWritePayload & {

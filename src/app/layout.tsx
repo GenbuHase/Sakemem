@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/header";
+import { defaultDescription, getMetadataBase, siteName } from "@/lib/metadata/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,8 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sakemem",
-  description: "お酒とおつまみの晩酌記録アプリ",
+  metadataBase: getMetadataBase(),
+  title: { default: siteName, template: "%s" },
+  description: defaultDescription,
 };
 
 export default function RootLayout({

@@ -17,11 +17,13 @@ import type { RecordCategory, SakememRecord } from "@/lib/types/record";
 type TimelineContainerProps = {
   allRecords: SakememRecord[];
   initialFilters: RecordFilters;
+  shareUsername?: string | null;
 };
 
 export function TimelineContainer({
   allRecords,
   initialFilters,
+  shareUsername = null,
 }: TimelineContainerProps) {
   // 状態管理
   const [query, setQuery] = useState(initialFilters.query ?? "");
@@ -98,7 +100,11 @@ export function TimelineContainer({
         </p>
       ) : null}
 
-      <Timeline entries={entries} filtered={isFiltered} />
+      <Timeline
+        entries={entries}
+        filtered={isFiltered}
+        shareUsername={shareUsername}
+      />
     </div>
   );
 }

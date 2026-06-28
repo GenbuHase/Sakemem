@@ -17,6 +17,8 @@ function makeRecord(
     rating: null,
     flavor_metrics: {},
     comment: null,
+    visibility: "private",
+    hide_place_when_shared: false,
     ...overrides,
   };
 }

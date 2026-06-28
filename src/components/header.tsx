@@ -1,9 +1,20 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { signOut } from "@/app/actions/auth";
 import { HeaderNav } from "@/components/header-nav";
 import { createClient } from "@/lib/supabase/server";
 
+function isPublicProfilePath(pathname: string): boolean {
+  return pathname.startsWith("/profile") || pathname.startsWith("/@");
+}
+
 export async function Header() {
+  const pathname = (await headers()).get("x-pathname") ?? "";
+
+  if (isPublicProfilePath(pathname)) {
+    return null;
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

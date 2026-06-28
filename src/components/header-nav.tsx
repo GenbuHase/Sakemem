@@ -105,6 +105,7 @@ export function HeaderNav({ isLoggedIn, signOutAction }: HeaderNavProps) {
     <>
       <div className="hidden items-center gap-1.5 sm:flex sm:gap-2">
         <NavLink href="/records">タイムライン</NavLink>
+        <NavLink href="/settings/profile">プロフィール設定</NavLink>
         <LinkButton href="/records/new" size="sm" className="whitespace-nowrap">
           記録する
         </LinkButton>
@@ -131,6 +132,12 @@ export function HeaderNav({ isLoggedIn, signOutAction }: HeaderNavProps) {
           onNavigate={() => setMenuOpen(false)}
         >
           タイムライン
+        </MobileNavLink>
+        <MobileNavLink
+          href="/settings/profile"
+          onNavigate={() => setMenuOpen(false)}
+        >
+          プロフィール設定
         </MobileNavLink>
         <LinkButton
           href="/records/new"

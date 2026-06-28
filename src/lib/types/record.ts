@@ -15,6 +15,9 @@ export type RecordCategory = (typeof RECORD_CATEGORIES)[number];
 
 export type FlavorMetrics = Record<string, number>;
 
+export const RECORD_VISIBILITIES = ["private", "unlisted", "public"] as const;
+export type RecordVisibility = (typeof RECORD_VISIBILITIES)[number];
+
 export type SakememRecord = {
   id: string;
   user_id: string;
@@ -30,4 +33,6 @@ export type SakememRecord = {
   rating: number | null;
   flavor_metrics: FlavorMetrics;
   comment: string | null;
+  visibility: RecordVisibility;
+  hide_place_when_shared: boolean;
 };

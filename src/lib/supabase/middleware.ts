@@ -1,7 +1,36 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function rewriteAtUsername(request: NextRequest): NextResponse | null {
+  const { pathname } = request.nextUrl;
+
+  const recordMatch = pathname.match(/^\/@([^/]+)\/([^/]+)$/);
+  if (recordMatch) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/profile/${recordMatch[1]}/${recordMatch[2]}`;
+    const response = NextResponse.rewrite(url);
+    response.headers.set("x-pathname", pathname);
+    return response;
+  }
+
+  const profileMatch = pathname.match(/^\/@([^/]+)$/);
+  if (profileMatch) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/profile/${profileMatch[1]}`;
+    const response = NextResponse.rewrite(url);
+    response.headers.set("x-pathname", pathname);
+    return response;
+  }
+
+  return null;
+}
+
 export async function updateSession(request: NextRequest) {
+  const rewriteResponse = rewriteAtUsername(request);
+  if (rewriteResponse) {
+    return rewriteResponse;
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -35,7 +64,10 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isAuthPage = pathname === "/login" || pathname === "/signup";
-  const isProtectedPage = pathname.startsWith("/records");
+  const isProtectedPage =
+    pathname.startsWith("/records") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/onboarding");
 
   if (!user && isProtectedPage) {
     const url = request.nextUrl.clone();
@@ -50,5 +82,21 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return supabaseResponse;
+  if (user && pathname === "/onboarding/profile") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/settings/profile";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  const response = supabaseResponse;
+  response.headers.set("x-pathname", pathname);
+  return response;
 }

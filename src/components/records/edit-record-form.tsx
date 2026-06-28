@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Select, TextInput } from "@/components/ui/inputs";
 import { SectionCard } from "@/components/ui/section-card";
+import { VisibilitySelector } from "@/components/sharing/visibility-selector";
 import {
   CATEGORY_LABELS,
   DRINK_CATEGORIES,
@@ -103,6 +104,13 @@ export function EditRecordForm({ record }: EditRecordFormProps) {
             defaultFlavorMetrics={record.flavor_metrics}
           />
         </div>
+      </SectionCard>
+
+      <SectionCard title="公開設定">
+        <VisibilitySelector
+          defaultValue={record.visibility ?? "private"}
+          defaultHidePlace={record.hide_place_when_shared ?? false}
+        />
       </SectionCard>
 
       {state?.error ? (

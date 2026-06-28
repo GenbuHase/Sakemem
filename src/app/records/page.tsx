@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getRecords } from "@/app/actions/records";
+import { getMyProfile } from "@/app/actions/profiles";
 import { TimelineContainer } from "@/components/records/timeline-container";
 import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -8,6 +9,7 @@ import { parseRecordFilters } from "@/lib/records/filter-records";
 
 export const metadata: Metadata = {
   title: "タイムライン | Sakemem",
+  robots: { index: false, follow: false },
 };
 
 type RecordsPageProps = {
@@ -18,6 +20,7 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
   await requireUser();
   const filters = parseRecordFilters(await searchParams);
   const allRecords = await getRecords();
+  const profile = await getMyProfile();
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
@@ -27,7 +30,11 @@ export default async function RecordsPage({ searchParams }: RecordsPageProps) {
         action={<LinkButton href="/records/new">記録する</LinkButton>}
       />
 
-      <TimelineContainer allRecords={allRecords} initialFilters={filters} />
+      <TimelineContainer
+        allRecords={allRecords}
+        initialFilters={filters}
+        shareUsername={profile?.username ?? null}
+      />
     </div>
   );
 }

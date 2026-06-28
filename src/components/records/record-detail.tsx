@@ -10,17 +10,28 @@ import type { SakememRecord } from "@/lib/types/record";
 import { cx } from "@/components/ui/styles";
 import { DeleteRecordButton } from "./delete-record-button";
 import { RatingDisplay } from "./rating-display";
+import { ShareButton } from "@/components/sharing/share-button";
 
 type RecordDetailProps = {
   record: SakememRecord;
   showActions?: boolean;
   nested?: boolean;
+  shareUsername?: string | null;
+  pairRecords?: SakememRecord[];
+  author?: {
+    username: string;
+    displayName: string;
+    href?: string;
+  };
 };
 
 export function RecordDetail({
   record,
   showActions = true,
   nested = false,
+  shareUsername = null,
+  pairRecords = [],
+  author,
 }: RecordDetailProps) {
   const styleLabel = getDrinkStyleLabel(record.category, record.style);
   const flavorDefs = buildFlavorMetricDefs(record);
@@ -37,6 +48,14 @@ export function RecordDetail({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
+          {author ? (
+            <Link
+              href={author.href ?? `/@${author.username}`}
+              className="mb-2 inline-block text-xs text-zinc-500 hover:text-zinc-700"
+            >
+              {author.displayName} @{author.username}
+            </Link>
+          ) : null}
           <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
             {getCategoryLabel(record.category)}
           </span>
@@ -76,6 +95,18 @@ export function RecordDetail({
           </div>
         ) : null}
       </div>
+
+      {showActions &&
+      shareUsername &&
+      (record.visibility === "unlisted" || record.visibility === "public") ? (
+        <div className="mt-3 border-t border-zinc-100 pt-3">
+          <ShareButton
+            record={record}
+            username={shareUsername}
+            pairRecords={pairRecords}
+          />
+        </div>
+      ) : null}
 
       <div className="mt-4 space-y-3 border-t border-zinc-100 pt-3">
         <div className="flex items-center justify-between gap-3">

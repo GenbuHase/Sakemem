@@ -6,8 +6,10 @@ import {
 import { getFlavorMetricDefs } from "@/lib/constants/flavor-metrics";
 import {
   RECORD_CATEGORIES,
+  RECORD_VISIBILITIES,
   type FlavorMetrics,
   type RecordCategory,
+  type RecordVisibility,
 } from "@/lib/types/record";
 import type { RecordWritePayload } from "./repository";
 
@@ -87,6 +89,20 @@ export function parsePlace(formData: FormData): string | null {
   return parseOptionalText(formData, "place");
 }
 
+export function parseRecordVisibility(
+  formData: FormData,
+): RecordVisibility {
+  const raw = parseString(formData, "visibility");
+  if (RECORD_VISIBILITIES.includes(raw as RecordVisibility)) {
+    return raw as RecordVisibility;
+  }
+  return "private";
+}
+
+export function parseHidePlaceWhenShared(formData: FormData): boolean {
+  return formData.get("hide_place_when_shared") === "on";
+}
+
 export function parseRecordWritePayload(
   formData: FormData,
   options: {
@@ -112,5 +128,7 @@ export function parseRecordWritePayload(
     rating: parseOptionalRating(formData, `${prefix}_rating`),
     flavor_metrics: parseFlavorMetrics(formData, prefix, category),
     comment: parseOptionalText(formData, `${prefix}_comment`),
+    visibility: parseRecordVisibility(formData),
+    hide_place_when_shared: parseHidePlaceWhenShared(formData),
   };
 }
