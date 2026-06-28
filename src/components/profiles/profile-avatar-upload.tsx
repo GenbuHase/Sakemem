@@ -10,12 +10,14 @@ type ProfileAvatarUploadProps = {
   displayName: string;
   avatarUrl?: string | null;
   onAvatarUrlChange: (url: string | null) => void;
+  onUploadingChange?: (uploading: boolean) => void;
 };
 
 export function ProfileAvatarUpload({
   displayName,
   avatarUrl,
   onAvatarUrlChange,
+  onUploadingChange,
 }: ProfileAvatarUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -36,12 +38,14 @@ export function ProfileAvatarUpload({
     setError(null);
     setPreviewUrl(URL.createObjectURL(file));
     setUploading(true);
+    onUploadingChange?.(true);
 
     const formData = new FormData();
     formData.set("avatar", file);
     const result = await uploadAvatar(formData);
 
     setUploading(false);
+    onUploadingChange?.(false);
 
     if (result.error) {
       setError(result.error);
@@ -50,6 +54,7 @@ export function ProfileAvatarUpload({
     }
 
     if (result.url) {
+      setPreviewUrl(null);
       onAvatarUrlChange(result.url);
     }
   }

@@ -19,4 +19,10 @@ describe("validateAvatarFile", () => {
     Object.defineProperty(file, "size", { value: 1024 });
     expect(validateAvatarFile(file).ok).toBe(false);
   });
+
+  it("accepts files with missing mime when extension is valid", () => {
+    const file = new File(["x"], "avatar.png", { type: "" });
+    Object.defineProperty(file, "size", { value: 1024 });
+    expect(validateAvatarFile(file)).toEqual({ ok: true });
+  });
 });

@@ -32,6 +32,7 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
   );
   const [confirmUsernameChange, setConfirmUsernameChange] = useState(false);
   const [draftUsername, setDraftUsername] = useState(profile?.username ?? "");
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   let siteHost = "localhost:3000";
   try {
@@ -76,6 +77,7 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
           displayName={displayName || "?"}
           avatarUrl={avatarUrl}
           onAvatarUrlChange={setAvatarUrl}
+          onUploadingChange={setAvatarUploading}
         />
       </SectionCard>
 
@@ -134,7 +136,7 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
             共有 URL が変わり、旧 URL は使えなくなります。
           </p>
           <div className="mt-3 flex gap-2">
-            <Button type="submit" size="sm" disabled={pending}>
+            <Button type="submit" size="sm" disabled={pending || avatarUploading}>
               変更する
             </Button>
             <Button
@@ -148,8 +150,14 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
           </div>
         </div>
       ) : (
-        <Button type="submit" fullWidth size="lg" disabled={pending}>
-          {pending ? "保存中..." : mode === "create" ? "はじめる" : "保存する"}
+        <Button type="submit" fullWidth size="lg" disabled={pending || avatarUploading}>
+          {pending
+            ? "保存中..."
+            : avatarUploading
+              ? "画像をアップロード中..."
+              : mode === "create"
+                ? "はじめる"
+                : "保存する"}
         </Button>
       )}
     </form>

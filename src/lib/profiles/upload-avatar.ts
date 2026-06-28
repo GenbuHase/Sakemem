@@ -5,10 +5,27 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/webp",
 ]);
 
+const EXTENSION_MIME_TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
+
+export function resolveAvatarMimeType(file: Pick<File, "name" | "type">): string {
+  if (file.type && ALLOWED_MIME_TYPES.has(file.type)) {
+    return file.type;
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? "";
+  return EXTENSION_MIME_TYPES[extension] ?? file.type;
+}
+
 export function validateAvatarFile(
-  file: File,
+  file: Pick<File, "name" | "size" | "type">,
 ): { ok: true } | { ok: false; error: string } {
-  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+  const mimeType = resolveAvatarMimeType(file);
+  if (!ALLOWED_MIME_TYPES.has(mimeType)) {
     return {
       ok: false,
       error: "JPEG、PNG、WebP 形式の画像を選んでください。",

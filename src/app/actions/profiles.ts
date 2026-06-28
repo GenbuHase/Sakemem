@@ -107,7 +107,11 @@ export async function createProfile(
     const display_name = parseDisplayName(formData.get("display_name"));
     const bio = parseBio(formData.get("bio"));
 
-    const input: CreateProfileInput = { username, display_name, bio };
+    const avatarUrlRaw = formData.get("avatar_url");
+    const avatar_url =
+      avatarUrlRaw !== null ? String(avatarUrlRaw).trim() || null : null;
+
+    const input: CreateProfileInput = { username, display_name, bio, avatar_url };
     await insertProfile(supabase, user.id, input);
 
     revalidatePublicProfile(username);
@@ -164,13 +168,29 @@ export async function updateProfile(
   }
 }
 
+function getAvatarUploadFile(formData: FormData): File | null {
+  const entry = formData.get("avatar");
+  if (typeof entry === "string" || !(entry instanceof Blob) || entry.size === 0) {
+    return null;
+  }
+
+  if (entry instanceof File) {
+    return entry;
+  }
+
+  const blob: Blob = entry;
+  return new File([blob], "avatar", {
+    type: blob.type || "application/octet-stream",
+  });
+}
+
 export async function uploadAvatar(
   formData: FormData,
 ): Promise<ProfileActionState & { url?: string }> {
   const { supabase, user } = await requireUser();
-  const file = formData.get("avatar");
+  const file = getAvatarUploadFile(formData);
 
-  if (!(file instanceof File) || file.size === 0) {
+  if (!file) {
     return { error: "画像ファイルを選択してください。" };
   }
 
@@ -196,6 +216,7 @@ export async function uploadAvatar(
       });
 
     if (uploadError) {
+      console.error("uploadAvatar storage error:", uploadError);
       return { error: "画像のアップロードに失敗しました。" };
     }
 
@@ -203,8 +224,15 @@ export async function uploadAvatar(
       data: { publicUrl },
     } = supabase.storage.from("profile-images").getPublicUrl(objectPath);
 
+    const existing = await fetchProfileByUserId(supabase, user.id);
+    if (existing) {
+      await updateProfileByUserId(supabase, user.id, { avatar_url: publicUrl });
+      revalidatePublicProfile(existing.username);
+    }
+
     return { url: publicUrl };
-  } catch {
+  } catch (error) {
+    console.error("uploadAvatar processing error:", error);
     return { error: "画像の処理に失敗しました。" };
   }
 }
