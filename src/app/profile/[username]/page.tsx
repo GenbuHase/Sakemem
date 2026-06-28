@@ -5,7 +5,8 @@ import { ProfileAvatar } from "@/components/profiles/profile-avatar";
 import { Timeline } from "@/components/records/timeline";
 import { buildPageMetadata } from "@/lib/metadata/build-metadata";
 import { buildPublicProfileMetadataInput } from "@/lib/metadata/public-profile";
-import { createClient } from "@/lib/supabase/server";
+import { siteName } from "@/lib/metadata/site";
+import { createPublicClient } from "@/lib/supabase/public";
 import {
   fetchPublicProfile,
   fetchPublicProfileRecords,
@@ -20,23 +21,34 @@ export async function generateMetadata({
   params,
 }: PublicProfilePageProps): Promise<Metadata> {
   const { username } = await params;
-  const supabase = await createClient();
-  const profile = await fetchPublicProfile(supabase, username);
 
-  if (!profile) {
-    return { title: "プロフィールが見つかりません" };
+  try {
+    const supabase = createPublicClient();
+    const profile = await fetchPublicProfile(supabase, username);
+
+    if (!profile) {
+      return {
+        title: "プロフィールが見つかりません",
+        robots: { index: false, follow: false },
+      };
+    }
+
+    const records = await fetchPublicProfileRecords(supabase, username);
+    const meta = buildPublicProfileMetadataInput(profile, records.length);
+    return buildPageMetadata(meta);
+  } catch {
+    return {
+      title: `@${username} | ${siteName}`,
+      robots: { index: false, follow: false },
+    };
   }
-
-  const records = await fetchPublicProfileRecords(supabase, username);
-  const meta = buildPublicProfileMetadataInput(profile, records.length);
-  return buildPageMetadata(meta);
 }
 
 export default async function PublicProfilePage({
   params,
 }: PublicProfilePageProps) {
   const { username } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const profile = await fetchPublicProfile(supabase, username);
 
   if (!profile) {

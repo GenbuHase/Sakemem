@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { loadOgFonts } from "@/lib/metadata/og-fonts";
 import { siteName } from "@/lib/metadata/site";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import {
   fetchPublicProfile,
   fetchPublicProfileRecords,
@@ -17,7 +17,7 @@ type Props = {
 
 export default async function Image({ params }: Props) {
   const { username } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const profile = await fetchPublicProfile(supabase, username);
 
   if (!profile) {

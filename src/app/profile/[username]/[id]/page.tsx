@@ -7,7 +7,8 @@ import { buildPageMetadata } from "@/lib/metadata/build-metadata";
 import { buildRecordShareMetadataInput } from "@/lib/metadata/record-share";
 import { isFoodCategory } from "@/lib/constants/categories";
 import { formatRecordDate } from "@/lib/utils/date";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
+import { siteName } from "@/lib/metadata/site";
 import {
   fetchSharedPairRecords,
   fetchSharedRecord,
@@ -23,32 +24,43 @@ export async function generateMetadata({
   params,
 }: SharedRecordPageProps): Promise<Metadata> {
   const { username, id } = await params;
-  const supabase = await createClient();
-  const shared = await fetchSharedRecord(supabase, username, id);
 
-  if (!shared) {
-    return { title: "記録が見つかりません" };
+  try {
+    const supabase = createPublicClient();
+    const shared = await fetchSharedRecord(supabase, username, id);
+
+    if (!shared) {
+      return {
+        title: "記録が見つかりません",
+        robots: { index: false, follow: false },
+      };
+    }
+
+    let pairRecords: SakememRecord[] = [];
+    if (shared.pair_id) {
+      pairRecords = await fetchSharedPairRecords(
+        supabase,
+        username,
+        shared.pair_id,
+        shared.id,
+      );
+    }
+
+    const meta = buildRecordShareMetadataInput(shared, pairRecords);
+    return buildPageMetadata(meta);
+  } catch {
+    return {
+      title: `記録 | ${siteName}`,
+      robots: { index: false, follow: false },
+    };
   }
-
-  let pairRecords: SakememRecord[] = [];
-  if (shared.pair_id) {
-    pairRecords = await fetchSharedPairRecords(
-      supabase,
-      username,
-      shared.pair_id,
-      shared.id,
-    );
-  }
-
-  const meta = buildRecordShareMetadataInput(shared, pairRecords);
-  return buildPageMetadata(meta);
 }
 
 export default async function SharedRecordPage({
   params,
 }: SharedRecordPageProps) {
   const { username, id } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const shared = await fetchSharedRecord(supabase, username, id);
 
   if (!shared) {

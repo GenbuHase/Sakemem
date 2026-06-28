@@ -4,6 +4,26 @@ import { NextResponse, type NextRequest } from "next/server";
 function rewriteAtUsername(request: NextRequest): NextResponse | null {
   const { pathname } = request.nextUrl;
 
+  const recordOgMatch = pathname.match(
+    /^\/@([^/]+)\/([^/]+)\/opengraph-image$/,
+  );
+  if (recordOgMatch) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/profile/${recordOgMatch[1]}/${recordOgMatch[2]}/opengraph-image`;
+    const response = NextResponse.rewrite(url);
+    response.headers.set("x-pathname", pathname);
+    return response;
+  }
+
+  const profileOgMatch = pathname.match(/^\/@([^/]+)\/opengraph-image$/);
+  if (profileOgMatch) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/profile/${profileOgMatch[1]}/opengraph-image`;
+    const response = NextResponse.rewrite(url);
+    response.headers.set("x-pathname", pathname);
+    return response;
+  }
+
   const recordMatch = pathname.match(/^\/@([^/]+)\/([^/]+)$/);
   if (recordMatch) {
     const url = request.nextUrl.clone();

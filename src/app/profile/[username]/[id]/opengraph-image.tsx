@@ -3,7 +3,7 @@ import { getCategoryLabel } from "@/lib/constants/categories";
 import { isFoodCategory } from "@/lib/constants/categories";
 import { loadOgFonts } from "@/lib/metadata/og-fonts";
 import { siteName } from "@/lib/metadata/site";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import {
   fetchSharedPairRecords,
   fetchSharedRecord,
@@ -19,7 +19,7 @@ type Props = {
 
 export default async function Image({ params }: Props) {
   const { username, id } = await params;
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const record = await fetchSharedRecord(supabase, username, id);
 
   if (!record) {

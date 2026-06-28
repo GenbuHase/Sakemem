@@ -1,6 +1,7 @@
 import type { SharedRecord } from "@/lib/sharing/mask-record";
 import { getPairFoodNames } from "@/lib/sharing/build-share-text";
 import type { SakememRecord } from "@/lib/types/record";
+import { buildRecordOgImagePath } from "./og-image-path";
 import { siteName } from "./site";
 
 function truncate(text: string, max: number): string {
@@ -51,6 +52,7 @@ export function buildRecordShareMetadataInput(
     title: buildRecordShareTitle(sakemem),
     description: buildRecordShareDescription(sakemem, pairRecords),
     path: `/@${record.profile_username}/${record.id}`,
+    imagePath: buildRecordOgImagePath(record.profile_username, record.id),
     robots:
       record.visibility === "public"
         ? ({ index: true, follow: true } as const)

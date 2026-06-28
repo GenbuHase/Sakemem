@@ -1,4 +1,5 @@
 import type { PublicProfile } from "@/lib/profiles/types";
+import { buildProfileOgImagePath } from "./og-image-path";
 import { siteName } from "./site";
 
 function truncate(text: string, max: number): string {
@@ -28,6 +29,7 @@ export function buildPublicProfileMetadataInput(
     title: buildPublicProfileTitle(profile),
     description: buildPublicProfileDescription(profile, recordCount),
     path: `/@${profile.username}`,
+    imagePath: buildProfileOgImagePath(profile.username),
     robots: { index: true, follow: true } as const,
   };
 }
