@@ -6,13 +6,14 @@ import {
   updateProfile,
   type ProfileActionState,
 } from "@/app/actions/profiles";
-import { Button, LinkButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { TextArea, TextInput } from "@/components/ui/inputs";
 import { SectionCard } from "@/components/ui/section-card";
 import type { Profile } from "@/lib/profiles/types";
 import { getSiteUrl } from "@/lib/sharing/build-share-url";
 import { ProfileAvatarUpload } from "./profile-avatar-upload";
+import { ProfilePublicPreviewCard } from "./profile-public-preview-card";
 import { UsernameField } from "./username-field";
 
 const initialState: ProfileActionState | null = null;
@@ -30,6 +31,7 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
     profile?.avatar_url ?? null,
   );
   const [confirmUsernameChange, setConfirmUsernameChange] = useState(false);
+  const [draftUsername, setDraftUsername] = useState(profile?.username ?? "");
 
   let siteHost = "localhost:3000";
   try {
@@ -62,6 +64,13 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
         <input type="hidden" name="avatar_url" value={avatarUrl ?? ""} />
       ) : null}
 
+      {mode === "edit" && profile ? (
+        <ProfilePublicPreviewCard
+          liveUsername={profile.username}
+          draftUsername={draftUsername}
+        />
+      ) : null}
+
       <SectionCard title="プロフィール画像">
         <ProfileAvatarUpload
           displayName={displayName || "?"}
@@ -85,6 +94,7 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
             defaultValue={profile?.username}
             originalUsername={profile?.username}
             siteHost={siteHost}
+            onUsernameChange={setDraftUsername}
           />
           <TextArea
             id="bio"
@@ -96,19 +106,6 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
           />
         </div>
       </SectionCard>
-
-      {mode === "edit" && profile ? (
-        <p className="text-sm text-zinc-500">
-          公開プロフィール:{" "}
-          <LinkButton
-            href={`/@${profile.username}`}
-            variant="secondary"
-            size="sm"
-          >
-            プレビュー
-          </LinkButton>
-        </p>
-      ) : null}
 
       {state?.error ? (
         <FormMessage variant="error">{state.error}</FormMessage>

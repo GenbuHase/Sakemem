@@ -9,12 +9,14 @@ type UsernameFieldProps = {
   defaultValue?: string;
   originalUsername?: string;
   siteHost?: string;
+  onUsernameChange?: (username: string) => void;
 };
 
 export function UsernameField({
   defaultValue = "",
   originalUsername,
   siteHost = "sakemem.app",
+  onUsernameChange,
 }: UsernameFieldProps) {
   const [value, setValue] = useState(defaultValue);
   const [debouncedValue, setDebouncedValue] = useState(defaultValue);
@@ -74,13 +76,9 @@ export function UsernameField({
         onChange={(event) => {
           setValue(event.target.value);
           setAvailabilityMessage(null);
+          onUsernameChange?.(event.target.value);
         }}
         autoComplete="username"
-        hint={
-          <span className="flex items-center gap-1 text-xs text-zinc-500">
-            <span>{siteHost}/@</span>
-          </span>
-        }
       />
       {message ? (
         <p
