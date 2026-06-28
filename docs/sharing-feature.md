@@ -1,8 +1,11 @@
 # Sakemem 共有機能 — 設計メモ
 
 > 作成日: 2026-06-07  
-> ステータス: 設計検討中（未実装）  
-> 関連: [Sakemem_Context.md](../Sakemem_Context.md)
+> 更新日: 2026-06-28  
+> ステータス: 方針確定・実装待ち  
+> 関連: [sharing-implementation-plan.md](./sharing-implementation-plan.md)（**本実装計画・手順書**）、[Sakemem_Context.md](../Sakemem_Context.md)、[performance-improvement.md](./performance-improvement.md)
+
+**実装の詳細（DB・画面・OGP・工数・チェックリスト）は [sharing-implementation-plan.md](./sharing-implementation-plan.md) を参照。** 本書は背景・方針・議論の経緯を残す設計メモである。
 
 ## 1. 背景
 
@@ -33,24 +36,41 @@ Sakemem を「SNS」にするのではなく、**信頼できる人の晩酌ノ�
 | **Phase A（近い将来）** | 記録の外部共有（Twitter 等に投げられる形式）、公開プロフィールページ | 中 |
 | **Phase B（将来）** | Sakemem 内フォロー / フレンド、フィード、おすすめ集約 | 大 |
 
-**今回の想定は Phase A。** Twitter 等の SNS にそのまま貼れる形式での共有を優先する。アプリ内ソーシャルグラフ（フォロー機能）は Phase B として別途設計・実装する。
+**今回実装するのは Phase A のみ。** Twitter 等の SNS にそのまま貼れる形式での共有を優先する。**Sakemem 自体に SNS 機能（フォロー・フィード等）は持たせない。** アプリ内ソーシャルグラフは Phase B として別途設計・実装する。
 
-## 3. 公開範囲（4 段階）
+### 2.3 確定方針（2026-06-28）
+
+| 項目 | 決定内容 |
+| :--- | :--- |
+| アプリ内 SNS | **実装しない**（Phase B はスコープ外） |
+| 公開プロフィール `/@username` | **実装する**（`public` 記録のみ一覧） |
+| OGP | **動的生成**（`@vercel/og` で記録・プロフィールごとに OG 画像） |
+| 公開範囲（Phase A） | **`private` / `unlisted` / `public` の 3 値のみ**（`friends` は DB に入れない） |
+| `username` 変更 | **初版は不可** |
+| 工数目安 | **15.5〜20.5 人日**（詳細は [sharing-implementation-plan.md](./sharing-implementation-plan.md) §2） |
+
+## 3. 公開範囲
 
 記録ごとに以下のいずれかを設定する。デフォルトは `private`。
 
+### 3.1 Phase A（今回実装）— 3 段階
+
+| 値 | 説明 | 閲覧者 | プロフィール一覧 |
+| :--- | :--- | :--- | :---: |
+| `private` | 非公開（現状と同じ） | 本人のみ | — |
+| `unlisted` | 限定公開 | URL を知っている人のみ | 載せない |
+| `public` | 公開 | 誰でも | **載せる** |
+
+### 3.2 Phase B（将来）— 追加予定
+
 | 値 | 説明 | 閲覧者 |
 | :--- | :--- | :--- |
-| `private` | 非公開（現状と同じ） | 本人のみ |
-| `friends` | フレンド限定 | Phase B で実装。承認済みフレンドのみ |
-| `unlisted` | 限定公開 | URL を知っている人のみ（検索・一覧に出ない） |
-| `public` | 公開 | 誰でも（プロフィールページ・検索に載せるかは要検討） |
+| `friends` | フレンド限定 | 承認済みフレンドのみ（`friendships` テーブルが前提） |
 
 ### 補足
 
-- Phase A では `private` / `unlisted` / `public` の 3 つを先に実装し、`friends` はスキーマと RLS のみ用意（または CHECK 制約に含めて UI は後回し）でもよい。
-- `friends` を先に DB に入れておくと、Phase B 移行時のマイグレーション負荷を下げられる。
-- 場所（`place`）は共有時に非表示にするオプションがあると安心（例: `hide_place_on_share boolean`、または共有ビュー側でマスク）。
+- Phase A では `friends` を **DB の CHECK 制約にも含めない**。Phase B 着手時に `ALTER` で追加する（[sharing-implementation-plan.md](./sharing-implementation-plan.md) §12 参照）。
+- 場所（`place`）は `hide_place_when_shared` により共有時にマスク可能。
 
 ## 4. Phase A: 外部共有（Twitter 等）
 
@@ -59,8 +79,8 @@ Sakemem を「SNS」にするのではなく、**信頼できる人の晩酌ノ�
 1 件の記録（またはペア）を、**SNS に投稿しやすい形** で外部に見せる。
 
 - 共有用 URL: `/@[username]/[id]`（記録）、`/@[username]`（公開プロフィール）
-- OGP（Open Graph） / Twitter Card 用メタデータ
-- 共有ボタンから URL コピー、または Web Share API / intent URL
+- **動的 OGP**（Open Graph / Twitter Card）— 記録・プロフィールごとに `title` / `description` / OG 画像を生成
+- 共有ボタンから URL コピー、X intent、Web Share API（モバイル）
 
 ### 4.2 共有ページで見せる内容
 
@@ -92,11 +112,14 @@ https://sakemem.example.com/@genbu/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 https://sakemem.example.com/@genbu
 ```
 
-**OGP / Twitter Card（Next.js `metadata`）**
+**OGP / Twitter Card（Next.js `generateMetadata` + `opengraph-image.tsx`）**
 
 - `title`: 例) `獺祭 純米大吟醸 ★5 | Sakemem`
 - `description`: 評価・短いメモの抜粋、ペアおつまみがあれば「合わせて: 焼き鳥」
-- `og:image`: 静的テンプレ or 動的 OG 画像（銘柄名・評価・カテゴリを描画）。初期はテンプレ 1 枚でも可。
+- `og:image`: **`@vercel/og` による動的生成**（銘柄名・評価・カテゴリ・ペアおつまみ・投稿者を画像に描画）。記録ページと公開プロフィールでレイアウトを分ける。
+- `unlisted` 記録は `robots: noindex`、`public` のみ検索エンジンに index 可（初版）
+
+レイアウト・フォント・検証手順の詳細は [sharing-implementation-plan.md](./sharing-implementation-plan.md) §7。
 
 **投稿文テンプレート（コピー用）**
 
@@ -154,43 +177,31 @@ CREATE TABLE public.profiles (
   updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
--- records への追加
+-- records への追加（Phase A は 3 値のみ）
 ALTER TABLE public.records
   ADD COLUMN visibility text NOT NULL DEFAULT 'private'
-    CHECK (visibility IN ('private', 'friends', 'unlisted', 'public')),
+    CHECK (visibility IN ('private', 'unlisted', 'public')),
   ADD COLUMN hide_place_when_shared boolean NOT NULL DEFAULT false;
 ```
 
 - 共有 URL は `/@{username}/{records.id}` で一意に決まるため、別途 `share_token` カラムは不要。
-- インデックス: `profiles(username)`、`records(user_id, visibility)` where `visibility IN ('unlisted', 'public')`。
+- インデックス: `profiles(username)`、`records(user_id, visibility)` where `visibility = 'public'`。
+- マイグレーション正本: `supabase/migrations/005_sharing_and_profiles.sql`（[sharing-implementation-plan.md](./sharing-implementation-plan.md) §4）
 
-### 4.6 RLS 変更案
+### 4.6 共有データ取得（確定方針）
 
-既存の `records_select_own` に加え、**匿名（`anon`）および認証済みユーザーの両方** から閲覧できるポリシーを追加。
+`anon` に `records` テーブルへ広い SELECT ポリシーを足すのではなく、**SECURITY DEFINER 関数** で公開フィールドのみ返す（採用済み）。
 
-```sql
--- 共有記録: username + record_id で取得
---   profiles.username = :username
---   AND records.id = :id
---   AND records.user_id = profiles.id
---   AND records.visibility IN ('unlisted', 'public')
+| 関数 | 用途 |
+| :--- | :--- |
+| `get_shared_record(username, record_id)` | 記録共有ページ。`unlisted` / `public` のみ。`user_id` は返さない |
+| `get_public_profile(username)` | プロフィールヘッダー |
+| `get_public_profile_records(username)` | `public` 記録一覧（`unlisted` は含めない） |
 
--- 公開プロフィール一覧:
---   records.user_id = profiles.id AND records.visibility = 'public'
-```
+- `private` および存在しない組み合わせはすべて **404**（403 にしない）。
+- 本人向けの CRUD は既存 RLS（`auth.uid() = user_id`）のまま。
 
-**注意:** `anon` に `records` 全体を開くと漏洩リスクが高い。推奨は次のいずれか。
-
-1. **Server Component + 明示的クエリ:** `username`・`record_id`・`visibility` を組み合わせて 1 件だけ SELECT。`private` / `friends` は 404。
-2. **SECURITY DEFINER 関数:** `get_shared_record(p_username text, p_record_id uuid)` が公開フィールドのみ返す。`user_id` と `username` の一致も関数内で検証する。
-
-プロフィールページ用:
-
-```sql
--- profiles: username で SELECT 可能（公開カラムのみ）
--- public 記録一覧は profiles.id = records.user_id AND visibility = 'public'
--- unlisted 記録はプロフィール一覧クエリに含めない
-```
+SQL 全文は [sharing-implementation-plan.md](./sharing-implementation-plan.md) §4.3。
 
 ### 4.7 UI 変更案（Phase A）
 
@@ -200,7 +211,7 @@ ALTER TABLE public.records
 | 記録詳細 / タイムライン | 「共有」ボタン → URL コピー / X intent |
 | `/@[username]` | 表示名・bio・公開記録一覧（ペアカード） |
 | `/@[username]/[id]` | 共有専用レイアウト（`RecordDetail` `showActions={false}`） |
-| 新規登録後 | `profiles` 作成フロー（`username` 必須） |
+| 新規登録後 / 既存ユーザー初回ログイン | `profiles` 作成フロー（`username` 必須）。記録は可、共有は username 設定後 |
 
 ### 4.8 既存コードとの接続
 
@@ -211,15 +222,17 @@ ALTER TABLE public.records
 | `analyzeRecords` | 将来 Phase B のおすすめ集約 |
 | `filter-records` | 公開プロフィールの絞り込み |
 
-新規想定:
+新規想定（詳細なファイル一覧は [sharing-implementation-plan.md](./sharing-implementation-plan.md) §6）:
 
 ```
-src/lib/sharing/              # 共有 URL 組み立て、OG 用テキスト
+src/lib/sharing/              # 共有 URL・テキスト・RPC ラッパー
 src/lib/profiles/             # プロフィール CRUD
-src/app/profile/[username]/           # 公開プロフィール（内部）
-src/app/profile/[username]/[id]/      # 共有記録ページ（内部）
-src/middleware.ts または proxy.ts     # /@username → /profile/username へ rewrite
-supabase/migrations/003_sharing_and_profiles.sql
+src/lib/metadata/             # OGP メタデータ組み立て
+src/app/profile/[username]/           # 公開プロフィール + opengraph-image.tsx
+src/app/profile/[username]/[id]/      # 共有記録 + opengraph-image.tsx
+src/app/onboarding/profile/           # username 初回設定
+src/proxy.ts                          # /@username → /profile/username へ rewrite
+supabase/migrations/005_sharing_and_profiles.sql
 ```
 
 ## 5. Phase B: アプリ内フォロー（将来・大規模）
@@ -251,23 +264,35 @@ supabase/migrations/003_sharing_and_profiles.sql
 5. **`unlisted` と `public` の違いを UI で明確に** — 検索・プロフィール一覧に載るかどうか。
 6. **レート制限** — 記録 ID の列挙攻撃対策（UUID v4・`username` と `user_id` の一致検証・404 統一）。
 
-## 7. 開発ロードマップ（案）
+## 7. 開発ロードマップ
+
+Phase A の実装ステップ（チェックリスト付き）は [sharing-implementation-plan.md](./sharing-implementation-plan.md) §10 を正とする。
 
 | Step | 内容 | 依存 |
 | :--- | :--- | :--- |
-| Step 9a | `profiles` テーブル、登録時プロフィール作成、`/@[username]`（public 記録のみ） | — |
-| Step 9b | `records.visibility`、共有取得 API（username + id） | Step 9a |
-| Step 9c | `/@[username]/[id]` 共有ページ、OGP メタデータ、middleware rewrite | Step 9b |
-| Step 9d | 編集 UI（公開範囲）、共有ボタン（コピー / X intent） | Step 9c |
-| Step 10+ | フォロー、フィード、おすすめ集約（Phase B） | Step 9 完了後 |
+| Step 1 | `profiles`、オンボーディング、`username` バリデーション | — |
+| Step 2 | `visibility`、SECURITY DEFINER RPC | Step 1 |
+| Step 3 | 公開プロフィール・共有記録ページ、`proxy.ts` rewrite | Step 2 |
+| Step 4 | 動的 OGP（`generateMetadata` + `opengraph-image.tsx`） | Step 3 |
+| Step 5 | 編集 UI（公開範囲）、共有ボタン | Step 4 |
+| Step 6 | QA・ドキュメント・本番 OG 検証 | Step 5 |
+| Phase B | フォロー、フィード、おすすめ集約 | Phase A 完了後 |
 
-## 8. 未決定事項（実装前に決める）
+## 8. 決定事項・残課題
 
-- [ ] 公開プロフィールに載せる記録: `public` のみか、`unlisted` も本人が一覧で見られるか
-- [ ] `username` 変更可否（変更時は旧 URL リダイレクトが必要）
-- [ ] OG 画像: 静的 1 枚 vs 動的生成（`@vercel/og` 等）
-- [ ] 未ログイン閲覧者にプロフィールのどこまで見せるか（件数上限、ページネーション）
-- [ ] Phase A で `friends` を UI に出すか、DB のみ先行するか
+### 決定済み（2026-06-28）
+
+- [x] 公開プロフィールに載せる記録: **`public` のみ**（`unlisted` はプロフィール一覧に出さない）
+- [x] `username` 変更: **初版は不可**
+- [x] OG 画像: **動的生成**（`@vercel/og`）
+- [x] アプリ内 SNS: **Phase A では実装しない**
+- [x] `friends` visibility: **Phase A では DB にも入れない**
+- [x] プロフィール一覧の件数上限: **50 件**（初版はページネーションなし）
+
+### 実装着手前に最終確認（軽微）
+
+- [ ] ペアの片方が `private` のとき、共有ページで単体表示とするか 404 とするか（推奨: 単体表示）
+- [ ] 公開プロフィールの Header デザイン（ログインリンクのみの簡易ヘッダー推奨）
 
 ## 9. 参考: アンケートニーズと機能の対応
 
@@ -280,4 +305,15 @@ supabase/migrations/003_sharing_and_profiles.sql
 
 ---
 
-*このドキュメントは実装前の設計メモである。着手時は [Sakemem_Context.md](../Sakemem_Context.md) のロードマップ（Step 9 以降）にも反映すること。*
+## 10. ドキュメントの役割分担
+
+| ドキュメント | 役割 |
+| :--- | :--- |
+| **本書（sharing-feature.md）** | 背景、アンケート、Phase A/B の議論、方針の経緯 |
+| [sharing-implementation-plan.md](./sharing-implementation-plan.md) | 確定スコープ、DB・RPC・画面・動的 OGP・手順・工数 |
+| [performance-improvement.md](./performance-improvement.md) | プライベート領域の SPA 風化（共有ページの SSR と共存） |
+| [Sakemem_Context.md](../Sakemem_Context.md) | プロジェクト全体の正本（実装完了後に Step 11 として追記） |
+
+---
+
+*実装着手時は [sharing-implementation-plan.md](./sharing-implementation-plan.md) の Step 1 から進めること。*
