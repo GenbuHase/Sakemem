@@ -1,7 +1,7 @@
 # Sakemem 共有機能 — 本実装計画
 
 > 作成日: 2026-06-28  
-> 更新日: 2026-06-28（Phase A 実装完了・チェックリスト更新・ローカル確認手順 §15 追加）  
+> 更新日: 2026-06-29（プロフィール画像アップロード修正・Storage クリーンアップ・username 変更 UX 改善を追記）  
 > ステータス: Phase A 実装済み（各環境への `005` 適用・本番 OG 検証は環境依存）  
 > 関連: [sharing-feature.md](./sharing-feature.md)（設計メモ・背景）、[Sakemem_Context.md](../Sakemem_Context.md)、[performance-improvement.md](./performance-improvement.md)
 
@@ -345,7 +345,8 @@ src/lib/
 ├── profiles/
 │   ├── repository.ts           # CRUD（認証済み）
 │   ├── validate-username.ts
-│   ├── upload-avatar.ts        # Storage アップロード・リサイズ
+│   ├── upload-avatar.ts        # MIME バリデーション・リサイズ
+│   ├── delete-avatar-storage.ts # Storage オブジェクト削除（差し替え・削除時）
 │   └── types.ts
 ├── sharing/
 │   ├── build-share-url.ts
@@ -380,9 +381,10 @@ src/components/
 ├── layout/
 │   └── public-header.tsx           # 公開ページ用ヘッダー（認証状態で出し分け）
 ├── profiles/
-│   ├── profile-settings-form.tsx   # オンボーディング・設定で共用
-│   ├── profile-avatar-upload.tsx   # avatar_url 選択・プレビュー
-│   └── username-field.tsx          # 利用可否チェック付き入力
+│   ├── profile-settings-form.tsx       # オンボーディング・設定で共用
+│   ├── profile-avatar-upload.tsx       # 画像選択・アップロード・削除
+│   ├── profile-public-preview-card.tsx # 公開 URL プレビュー（設定画面）
+│   └── username-field.tsx              # 利用可否チェック付き入力
 └── sharing/
     ├── share-button.tsx
     └── visibility-selector.tsx
@@ -403,6 +405,7 @@ src/components/
 | `src/components/layout/public-header.tsx` | 公開ページ用ヘッダー（§8.3） |
 | `src/components/header.tsx` | 公開パスでは `null` を返し `PublicHeader` に委譲。通常ページでは「プロフィール設定」リンク |
 | `src/app/layout.tsx` | `metadataBase`, title template |
+| `next.config.ts` | `experimental.serverActions.bodySizeLimit` / `proxyClientMaxBodySize` を `3mb`（プロフィール画像 2 MB 上限に対応） |
 | 各 `page.tsx` の `metadata` | ページ別 OGP / robots（§7） |
 
 ### 6.3 Server Actions — revalidatePath
@@ -633,34 +636,68 @@ export const metadata: Metadata = {
 
 #### `username` 変更フロー
 
-1. ユーザーが新 username を入力 → debounce 後に `checkUsernameAvailable`（Server Action または RPC）
-2. 「保存」押下 → `username` が変わる場合はモーダルで URL 変更を確認
-3. Server Action `updateProfile`:
+1. ユーザーが新 username を入力 → debounce 後に `checkUsernameAvailable`（Server Action）
+2. 「保存する」押下 → `username` が変わる場合はインライン確認パネル（`@old → @new`、旧 URL 無効の注意書き）
+3. 「変更する」押下 → `updateProfile` Server Action（ボタンは「変更中...」表示）
+4. Server Action `updateProfile`:
    - 一意性チェック後に `profiles` を更新
    - 旧 username はリダイレクトせず 404
-4. 成功後: トースト + `revalidatePath` + 新 `/@username` へのリンク表示
+   - `revalidatePath` で新旧 `/@username` を再検証
+5. 成功後:
+   - 確認パネルを自動で閉じる
+   - `ProfilePublicPreviewCard` の公開 URL を即時更新し、「公開 URL を更新しました」を 4 秒表示
+   - ボタン直下に成功メッセージ + 新 `/@username` へのリンク（`ProfileActionState.profileUrl` / `username`）
+
+設定画面では `profile-public-preview-card.tsx` が「現在の公開 URL」「保存後の公開 URL（入力中）」を表示する。
 
 #### `avatar_url` アップロードフロー
 
-1. ファイル選択 → クライアントでプレビュー（`URL.createObjectURL`）
-2. 保存時: `uploadAvatar` Server Action
-   - 画像をサーバー側で正方形リサイズ（512px）・WebP 化（`sharp` 等）
-   - Storage `profile-images/{user_id}/{uuid}.webp` にアップロード
-   - 返却 URL を `profiles.avatar_url` に保存
-3. 「画像を削除」: `avatar_url = NULL`（Storage オブジェクトの削除はベストエフォート）
+1. ファイル選択 → クライアントでプレビュー（`URL.createObjectURL`）→ 即 `uploadAvatar` Server Action
+   - Next.js Server Action の既定 1 MB 制限を避けるため `next.config.ts` で `bodySizeLimit` / `proxyClientMaxBodySize` を `3mb` に設定
+   - FormData の `avatar` は `File` だけでなく `Blob` も受け付ける（`getAvatarUploadFile`）
+   - MIME 未設定の画像は拡張子から判定（`resolveAvatarMimeType`）
+   - サーバー側で正方形リサイズ（512px）・WebP 化（`sharp`）→ Storage `profile-images/{user_id}/{uuid}.webp`
+   - **プロフィールが存在すればアップロード成功時に即 `profiles.avatar_url` を DB 更新**（保存ボタンを押さなくても反映）
+   - オンボーディング中は `previous_avatar_url` を FormData に付与し、差し替え時に旧 Storage オブジェクトを削除
+2. `createProfile`（オンボーディング）: hidden `avatar_url` を読み取り、初回作成時に保存
+3. 「画像を削除」: `removeAvatar` で `avatar_url = NULL` + Storage オブジェクト削除（即時反映、保存ボタン不要）
+4. **Storage クリーンアップ**（`delete-avatar-storage.ts`）:
+   - 別画像への差し替え成功後、旧 URL のオブジェクトを削除
+   - `updateProfile` で `avatar_url` が変わった場合も旧オブジェクトを削除
+   - `{user_id}/` 配下のみ削除（ベストエフォート。失敗しても DB 更新は続行）
+5. アップロード・削除中は保存ボタンを無効化（「画像をアップロード中...」表示）
 
 #### Server Actions 概要
 
 ```ts
 // src/app/actions/profiles.ts
-export async function createProfile(data: CreateProfileInput): Promise<ActionResult>;
-export async function updateProfile(data: UpdateProfileInput): Promise<ActionResult>;
-export async function checkUsernameAvailable(username: string): Promise<{ available: boolean }>;
-export async function uploadAvatar(formData: FormData): Promise<ActionResult<{ url: string }>>;
-export async function removeAvatar(): Promise<ActionResult>;
+export type ProfileActionState = {
+  error?: string;
+  success?: string;
+  profileUrl?: string;
+  username?: string; // updateProfile 成功時に返却（UI の liveUsername 更新用）
+};
+
+export async function createProfile(
+  prevState: ProfileActionState | null,
+  formData: FormData,
+): Promise<ProfileActionState>;
+export async function updateProfile(
+  prevState: ProfileActionState | null,
+  formData: FormData,
+): Promise<ProfileActionState>;
+export async function checkUsernameAvailable(
+  username: string,
+): Promise<{ available: boolean }>;
+export async function uploadAvatar(
+  formData: FormData,
+): Promise<ProfileActionState & { url?: string }>;
+export async function removeAvatar(
+  currentUrl?: string | null,
+): Promise<ProfileActionState>;
 ```
 
-`updateProfile` は `display_name` / `bio` / `username` / `avatar_url` を部分更新可能にする。
+`updateProfile` は `display_name` / `bio` / `username` / `avatar_url` を FormData から更新する。`useActionState` でフォームと連携する。
 
 #### エラー表示
 
@@ -708,7 +745,10 @@ export async function removeAvatar(): Promise<ActionResult>;
 - [x] `updateProfile` / `checkUsernameAvailable` / `uploadAvatar` / `removeAvatar`
 - [x] ヘッダーからの導線、公開プロフィールの「編集」リンク（本人のみ・`PublicHeader`）
 - [x] オンボーディングフォームを共用コンポーネントにリファクタ（`ProfileSettingsForm`）
-- [x] `upload-avatar.test.ts`（MIME・サイズバリデーション）
+- [x] `upload-avatar.test.ts`（MIME・サイズバリデーション・拡張子フォールバック）
+- [x] `delete-avatar-storage.ts` / `delete-avatar-storage.test.ts`（差し替え・削除時の Storage クリーンアップ）
+- [x] `profile-public-preview-card.tsx`（公開 URL プレビュー・username 変更後の即時反映）
+- [x] `next.config.ts` — Server Action `bodySizeLimit` / `proxyClientMaxBodySize` を `3mb`
 
 ### Step 2: visibility + RPC（2.5〜3.5 人日）
 
@@ -759,10 +799,10 @@ export async function removeAvatar(): Promise<ActionResult>;
 
 | 種別 | 対象 |
 | :--- | :--- |
-| 単体 | `validate-username`, `build-share-url`, `mask-record`, `upload-avatar` |
+| 単体 | `validate-username`, `build-share-url`, `mask-record`, `upload-avatar`, `delete-avatar-storage` |
 | 単体（未追加） | `build-share-text` — 初版では手動 QA でカバー |
 | 単体（既存パターン） | `groupRecordsForTimeline` — 公開記録のペア結合 |
-| 手動 | RPC + 各 visibility、OG 画像の日本語、X intent、プロフィール画像アップロード・username 変更 |
+| 手動 | RPC + 各 visibility、OG 画像の日本語、X intent、プロフィール画像アップロード・差し替え・削除（Storage クリーンアップ）・username 変更（公開 URL プレビュー） |
 | E2E | 初版では省略（Vitest のみ） |
 
 ---
@@ -882,7 +922,9 @@ npm run dev
 | 共有ボタンが出ない | username 未設定、または `visibility` が `private` |
 | `/@username/...` が 404 | 記録が `private`、または username / ID の不一致 |
 | ログイン後リダイレクト失敗 | Redirect URLs に `http://localhost:3000/auth/callback` が無い |
-| 画像アップロード失敗 | `profile-images` バケット未作成（`005` で作成） |
+| 画像アップロード失敗 | `profile-images` バケット未作成（`005` で作成）。2 MB 超・Server Action 1 MB 既定の場合は `next.config.ts` の `bodySizeLimit` を確認し **開発サーバーを再起動** |
+| 画像を選んでもリロード後に消える | 旧実装では保存ボタン押下まで DB 未更新だった。現行はアップロード成功時に DB 更新。再選択で解消 |
+| username 変更後に UI が変わらない | 確認パネルが残る・公開 URL が更新されない問題を 2026-06-29 に修正済み（`ProfileActionState.username` + `liveUsername`） |
 
 ---
 

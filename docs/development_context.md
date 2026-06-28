@@ -45,3 +45,16 @@ graph TD
    * JANコードを受け取り、Yahoo!ショッピングAPI等の商品検索APIを呼び出す。
    * 取得したテキスト（商品名やブランド名）を元に、既存の日本酒サジェスト機能（`/api/sakenowa/suggest`）等へ問い合わせを行い、正規の銘柄・蔵元データを揺らぎなく取得する。
    * 取得結果をフロントエンドに返し、記録フォームの初期入力値として自動設定する。
+
+---
+
+## 3. プロフィール機能の改善（2026-06-29）
+
+共有機能 Phase A のプロフィール設定まわりで、以下を実装済み。詳細は [sharing-feature.md](./sharing-feature.md) §4.9、[sharing-implementation-plan.md](./sharing-implementation-plan.md) §8.6 を参照。
+
+| 項目 | 内容 |
+| :--- | :--- |
+| 画像アップロード | 選択時に即 `uploadAvatar` → DB 更新。`createProfile` でも `avatar_url` を保存 |
+| Server Action 制限 | `next.config.ts` で `bodySizeLimit` / `proxyClientMaxBodySize` を `3mb` |
+| Storage クリーンアップ | `delete-avatar-storage.ts` — 差し替え・削除・URL 変更時に旧オブジェクトを削除 |
+| username 変更 UX | 確認パネル（`@old → @new`）、保存中表示、公開 URL プレビューの即時更新 |

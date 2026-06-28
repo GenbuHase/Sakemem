@@ -18,6 +18,7 @@
 | **External API** | [さけのわAPI](https://sakenowa.com)（日本酒選択時の銘柄・蔵元サジェスト） |
 | **OG 画像** | `@vercel/og`（共有ページの動的 OG 画像生成） |
 | **画像処理** | `sharp`（プロフィール画像のリサイズ・WebP 化） |
+| **設定** | `next.config.ts` — Server Action `bodySizeLimit` / `proxyClientMaxBodySize` を `3mb`（プロフィール画像アップロード用） |
 | **テスト** | Vitest（`npm test`） |
 | **CI** | GitHub Actions（lint → test → build） |
 
@@ -169,7 +170,7 @@ src/
 ├── components/
 │   ├── auth/             # 認証フォーム
 │   ├── layout/           # PublicHeader（公開ページ用）
-│   ├── profiles/         # プロフィール設定フォーム・アバター
+│   ├── profiles/         # profile-settings-form, profile-avatar-upload, profile-public-preview-card, username-field
 │   ├── records/          # 記録 UI（フォーム、タイムライン、フィルタ、分析）
 │   ├── sharing/          # 共有ボタン・公開範囲セレクタ
 │   └── ui/               # 共通 UI プリミティブ
@@ -177,7 +178,7 @@ src/
 │   ├── auth/             # requireUser 等
 │   ├── constants/        # カテゴリ・種類・評価軸定義
 │   ├── metadata/         # OGP メタデータ・フォント読み込み
-│   ├── profiles/         # プロフィール CRUD・画像アップロード
+│   ├── profiles/         # repository, validate-username, upload-avatar, delete-avatar-storage
 │   ├── records/          # ドメインロジック（フィルタ、分析、ペアリング、リポジトリ）
 │   ├── sharing/          # 共有 URL・RPC ラッパー・place マスク
 │   ├── sakenowa/         # さけのわ API クライアント
@@ -202,7 +203,7 @@ src/
 | Step 10 | パフォーマンス改善（タイムラインのクライアントサイド移行、即時ローディング遷移の導入） | ✅ 完了 |
 | Step 11 | 共有機能 Phase A（プロフィール、公開範囲、公開ページ、動的 OGP、共有 UI） | ✅ 完了 |
 
-**現状:** MVP・パフォーマンス改善に加え、共有機能 Phase A まで実装済み（`alpha-0.3.11`）。Phase B（フォロー・フィード等）は未着手。各環境への `005_sharing_and_profiles.sql` 適用と本番 OG 検証はデプロイ時に実施。
+**現状:** MVP・パフォーマンス改善に加え、共有機能 Phase A まで実装済み（`alpha-0.3.14.2`）。2026-06-29 時点でプロフィール画像のアップロード即時 DB 反映・Storage クリーンアップ・username 変更 UX も反映済み。Phase B（フォロー・フィード等）は未着手。各環境への `005_sharing_and_profiles.sql` 適用と本番 OG 検証はデプロイ時に実施。
 
 ### 関連ファイル
 
@@ -211,4 +212,4 @@ src/
 - **環境変数テンプレート:** `.env.example`
 - **セットアップ・デプロイ手順:** `README.md`（ローカル確認は implementation-plan §15）
 - **CI:** `.github/workflows/ci.yml`
-- **テスト:** `src/lib/records/*.test.ts`、`src/lib/profiles/*.test.ts`、`src/lib/sharing/build-share-url.test.ts`、`src/lib/constants/drink-styles.test.ts`
+- **テスト:** `src/lib/records/*.test.ts`、`src/lib/profiles/*.test.ts`（`upload-avatar`、`delete-avatar-storage`、`validate-username` 含む）、`src/lib/sharing/build-share-url.test.ts`、`src/lib/constants/drink-styles.test.ts`

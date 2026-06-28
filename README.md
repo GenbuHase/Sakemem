@@ -58,6 +58,8 @@ npm run dev
 3. Supabase Auth の Redirect URLs に `http://localhost:3000/auth/callback` を登録
 4. ログイン → プロフィール設定 → 記録を `unlisted` / `public` に変更 → `/@{username}/{id}` で確認
 
+**プロフィール画像:** 選択と同時にアップロードされ DB に反映される。`next.config.ts` 変更後は開発サーバーの再起動が必要。詳細は [docs/sharing-implementation-plan.md](./docs/sharing-implementation-plan.md) §8.6・§15.6 を参照。
+
 ## スクリプト
 
 | コマンド | 説明 |
@@ -88,5 +90,6 @@ npm run dev
 - カテゴリ別の記録数・平均評価の分析
 - 日本酒カテゴリでのさけのわ API サジェスト
 - **共有（Phase A）:** プロフィール（`/@username`）、記録の公開範囲（`private` / `unlisted` / `public`）、共有ページ・動的 OGP、URL コピー / X intent / Web Share API
+- **プロフィール設定:** 画像の即時アップロード、差し替え・削除時の Storage クリーンアップ、username 変更時の公開 URL プレビュー
 
 共有機能の設計・実装詳細は [docs/sharing-feature.md](./docs/sharing-feature.md) と [docs/sharing-implementation-plan.md](./docs/sharing-implementation-plan.md) を参照してください。

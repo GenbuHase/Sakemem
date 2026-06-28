@@ -1,7 +1,7 @@
 # Sakemem 共有機能 — 設計メモ
 
 > 作成日: 2026-06-07  
-> 更新日: 2026-06-28（Phase A 実装完了・ローカル確認手順を追記）  
+> 更新日: 2026-06-29（プロフィール画像・username 変更 UX の実装確定事項を追記）  
 > ステータス: Phase A 実装済み（本番 DB への `005` 適用・本番 OG 検証は環境依存）  
 > 関連: [sharing-implementation-plan.md](./sharing-implementation-plan.md)（**本実装計画・手順書**）、[Sakemem_Context.md](../Sakemem_Context.md)、[performance-improvement.md](./performance-improvement.md)
 
@@ -229,13 +229,13 @@ SQL 全文は [sharing-implementation-plan.md](./sharing-implementation-plan.md)
 
 ```
 src/lib/sharing/              # 共有 URL・テキスト・RPC ラッパー
-src/lib/profiles/             # プロフィール CRUD・画像アップロード
+src/lib/profiles/             # プロフィール CRUD・画像アップロード・Storage 削除
 src/lib/metadata/             # OGP メタデータ組み立て
 src/app/profile/[username]/           # 公開プロフィール + opengraph-image.tsx
 src/app/profile/[username]/[id]/      # 共有記録 + opengraph-image.tsx
 src/app/onboarding/profile/           # 初回プロフィール設定
 src/app/settings/profile/             # プロフィール編集
-src/components/profiles/              # 設定フォーム・アバターアップロード
+src/components/profiles/              # 設定フォーム・アバター・公開 URL プレビュー
 src/components/layout/public-header.tsx  # 公開ページ用ヘッダー（認証状態で出し分け）
 src/proxy.ts                          # /@username → /profile/username へ rewrite
 supabase/migrations/005_sharing_and_profiles.sql
@@ -262,15 +262,18 @@ supabase/migrations/005_sharing_and_profiles.sql
 
 - **形式:** 3〜30 文字、`[a-zA-Z0-9_-]` のみ（オンボーディングと同一）
 - **一意性:** `lower(username)` でユニーク（大文字小文字は区別しない）
-- **確認 UI:** 保存前に「共有 URL が `/@{新username}` に変わり、旧 URL は使えなくなる」旨を明示
+- **確認 UI:** 保存前にインライン確認パネル（`@old → @new`、旧 URL 無効の注意）。「変更する」押下後は「変更中...」表示、成功時にパネルを自動で閉じる
+- **公開 URL プレビュー:** `ProfilePublicPreviewCard` が保存後の URL を即時反映し、「公開 URL を更新しました」を 4 秒表示
 - **旧 URL:** リダイレクトは **初版では実装しない**（404）。将来 `username_aliases` テーブルで対応可能
 
 #### 4.9.3 `avatar_url` の保存方針
 
 - **保存先:** Supabase Storage バケット `profile-images`（公開読み取り）
 - **パス:** `{user_id}/{uuid}.webp`（上書きではなく新規オブジェクト。DB の URL のみ更新）
-- **制約:** JPEG / PNG / WebP、最大 2 MB。サーバー側でリサイズ（正方形 512px 程度）して WebP 化を推奨
-- **削除:** 「画像を削除」で `avatar_url` を `NULL` にし、Storage 上のオブジェクトは非同期クリーンアップ（初版は DB のみ NULL でも可）
+- **制約:** JPEG / PNG / WebP、最大 2 MB。サーバー側でリサイズ（正方形 512px）して WebP 化（`sharp`）
+- **アップロードタイミング:** ファイル選択時に即 `uploadAvatar` Server Action。プロフィール存在時は DB も即更新（保存ボタン不要）
+- **Server Action サイズ制限:** `next.config.ts` で `bodySizeLimit` / `proxyClientMaxBodySize` を `3mb`（既定 1 MB では 2 MB 画像が失敗する）
+- **削除・差し替え:** `delete-avatar-storage.ts` で旧 Storage オブジェクトをベストエフォート削除（`{user_id}/` 配下のみ）
 
 #### 4.9.4 設定画面 UI（`/settings/profile`）
 
@@ -278,8 +281,11 @@ supabase/migrations/005_sharing_and_profiles.sql
 
 ```
 ┌─────────────────────────────────────────┐
-│  プロフィール設定                        │
+│  公開プロフィール（プレビューカード）      │
+│  現在の公開 URL / 保存後の公開 URL        │
+│  [ 公開プロフィールを見る ]               │
 ├─────────────────────────────────────────┤
+│  プロフィール画像                        │
 │  [ 画像プレビュー ]  [ 画像を選ぶ ]      │
 │                      [ 画像を削除 ]      │
 │  推奨: 正方形・512px 以上                │
@@ -294,16 +300,15 @@ supabase/migrations/005_sharing_and_profiles.sql
 │  [________________________]              │
 │  [________________________]              │
 ├─────────────────────────────────────────┤
-│  公開プロフィール: /@genbu  [プレビュー] │
-│                                         │
 │              [ 保存する ]                │
+│  （username 変更時は確認パネルに切替）   │
 └─────────────────────────────────────────┘
 ```
 
-- **画像:** クリックまたはドラッグ＆ドロップで選択 → クライアントでプレビュー → 保存時に Storage アップロード → 返却 URL を `avatar_url` に保存
-- **ユーザー名:** 入力中に利用可否を非同期チェック（debounce）。変更時は確認ダイアログ
-- **保存後:** トースト表示 + `revalidatePath` で公開プロフィール・該当記録の OGP キャッシュを更新
-- **username 変更時:** 新 `/@username` へのリンクを結果画面で案内
+- **画像:** 選択と同時にアップロード → プレビュー表示。アップロード中は保存ボタン無効
+- **ユーザー名:** 入力中に利用可否を非同期チェック（debounce）。変更時はインライン確認（`@old → @new`）
+- **保存後:** 成功メッセージ（ボタン直下）+ `revalidatePath` + 公開 URL プレビューの即時更新
+- **username 変更時:** 確認パネルが閉じ、「公開 URL を更新しました」通知 + 新 `/@username` へのリンク
 
 オンボーディング（`/onboarding/profile`）は上記のうち **画像・表示名・ユーザー名・bio** を必須/任意の組み合わせで初回のみ表示。`avatar_url` はオンボーディングでは **任意**（スキップ可）。
 
@@ -312,8 +317,10 @@ supabase/migrations/005_sharing_and_profiles.sql
 | 処理 | 実装 |
 | :--- | :--- |
 | プロフィール取得（本人） | `profiles` を RLS `auth.uid() = id` で SELECT |
-| プロフィール更新 | Server Action `updateProfile` — `display_name` / `bio` / `username`（一意性チェック付き） |
-| 画像アップロード | 署名付き URL または Server Action 経由で Storage に PUT → 返却 URL を `avatar_url` に保存 |
+| プロフィール更新 | Server Action `updateProfile`（FormData + `useActionState`）— `display_name` / `bio` / `username` / `avatar_url` |
+| 画像アップロード | Server Action `uploadAvatar` — 選択時に即実行。存在すれば DB 更新 + 旧 Storage 削除 |
+| 画像削除 | Server Action `removeAvatar` — DB `NULL` + Storage 削除（即時） |
+| Storage クリーンアップ | `delete-avatar-storage.ts` — 公開 URL からパス解析、`{user_id}/` 配下のみ削除 |
 | 公開面 | 既存 RPC `get_public_profile` 等が `avatar_url` を返す |
 
 ### 4.10 公開ページのヘッダーと閲覧専用 UI（2026-06-28 確定）
@@ -406,6 +413,13 @@ Phase A の実装ステップ（チェックリスト付き）は [sharing-imple
 - [x] プロフィール一覧の件数上限: **50 件**（初版はページネーションなし）
 - [x] 公開ページ本文: **常に閲覧専用**（記録の編集・削除なし。`Timeline` は `showActions={false}`）
 - [x] 公開ページヘッダー: **`PublicHeader` で認証状態を反映**（§4.10）。未ログインは `ログイン` + `新規登録`、他人閲覧時は `タイムライン` のみ、本人のプロフィール閲覧時は `プロフィールを編集` + `タイムライン`
+
+### 実装時の確定事項（2026-06-29）
+
+- [x] プロフィール画像: 選択時に即アップロード + DB 更新（`uploadAvatar`）。`createProfile` でも `avatar_url` を保存
+- [x] Server Action ボディサイズ: `next.config.ts` で `3mb`（プロフィール画像 2 MB 上限に対応）
+- [x] Storage クリーンアップ: 差し替え・削除・`updateProfile` で URL 変更時に旧オブジェクトを削除（`delete-avatar-storage.ts`）
+- [x] username 変更 UX: 確認パネル自動クローズ、変更前後表示、公開 URL プレビュー即時更新、`ProfileActionState.username` 返却
 
 ### 実装時の確定事項（2026-06-28）
 
