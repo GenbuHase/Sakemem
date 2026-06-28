@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ProfileAvatar } from "@/components/profiles/profile-avatar";
 import { Timeline } from "@/components/records/timeline";
-import { LinkButton } from "@/components/ui/button";
 import { buildPageMetadata } from "@/lib/metadata/build-metadata";
 import { buildPublicProfileMetadataInput } from "@/lib/metadata/public-profile";
 import { createClient } from "@/lib/supabase/server";
@@ -47,11 +46,6 @@ export default async function PublicProfilePage({
   const records = await fetchPublicProfileRecords(supabase, username);
   const entries = groupRecordsForTimeline(records);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const isOwner = user?.id === profile.id;
-
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start">
@@ -69,13 +63,6 @@ export default async function PublicProfilePage({
             <p className="mt-3 text-sm leading-relaxed text-zinc-700">
               {profile.bio}
             </p>
-          ) : null}
-          {isOwner ? (
-            <div className="mt-4">
-              <LinkButton href="/settings/profile" variant="secondary" size="sm">
-                プロフィールを編集
-              </LinkButton>
-            </div>
           ) : null}
         </div>
       </div>
