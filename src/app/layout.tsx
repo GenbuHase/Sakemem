@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/header";
+import { HeaderGate } from "@/components/header-gate";
 import { defaultDescription, getMetadataBase, siteName } from "@/lib/metadata/site";
 import "./globals.css";
 
@@ -31,7 +32,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-zinc-50 font-sans text-zinc-900">
-        <Header />
+        <HeaderGate>
+          <Header />
+        </HeaderGate>
         {children}
       </body>
     </html>
