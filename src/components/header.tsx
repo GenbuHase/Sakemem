@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
 import { HeaderNav } from "@/components/header-nav";
+import { fetchProfileByUserId } from "@/lib/profiles/repository";
 import { createClient } from "@/lib/supabase/server";
 
 export async function Header() {
@@ -8,6 +9,10 @@ export async function Header() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const userProfile = user
+    ? await fetchProfileByUserId(supabase, user.id)
+    : null;
 
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-200/80 bg-white/90 backdrop-blur-sm">
@@ -23,7 +28,19 @@ export async function Header() {
           aria-label="メインナビゲーション"
           className="flex shrink-0 items-center text-sm"
         >
-          <HeaderNav isLoggedIn={!!user} signOutAction={signOut} />
+          <HeaderNav
+            isLoggedIn={!!user}
+            signOutAction={signOut}
+            userProfile={
+              userProfile
+                ? {
+                    displayName: userProfile.display_name,
+                    username: userProfile.username,
+                    avatarUrl: userProfile.avatar_url,
+                  }
+                : null
+            }
+          />
         </nav>
       </div>
     </header>

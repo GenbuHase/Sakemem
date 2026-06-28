@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState, type Dispatch, type SetStateAction } from "react";
+import { HeaderUserMenu } from "@/components/header-user-menu";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cx } from "@/components/ui/styles";
 
@@ -12,9 +13,16 @@ const NAV_LINK_CLASS =
 const MOBILE_NAV_LINK_CLASS =
   "block rounded-lg px-3 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300";
 
+type HeaderUserProfile = {
+  displayName: string;
+  username: string;
+  avatarUrl: string | null;
+};
+
 type HeaderNavProps = {
   isLoggedIn: boolean;
   signOutAction: () => Promise<void>;
+  userProfile?: HeaderUserProfile | null;
 };
 
 type MenuState = {
@@ -22,7 +30,11 @@ type MenuState = {
   pathname: string;
 };
 
-export function HeaderNav({ isLoggedIn, signOutAction }: HeaderNavProps) {
+export function HeaderNav({
+  isLoggedIn,
+  signOutAction,
+  userProfile,
+}: HeaderNavProps) {
   const pathname = usePathname();
   const [menuState, setMenuState] = useState<MenuState>({
     open: false,
@@ -105,61 +117,86 @@ export function HeaderNav({ isLoggedIn, signOutAction }: HeaderNavProps) {
     <>
       <div className="hidden items-center gap-1.5 sm:flex sm:gap-2">
         <NavLink href="/records">タイムライン</NavLink>
-        <NavLink href="/settings/profile">プロフィール設定</NavLink>
         <LinkButton href="/records/new" size="sm" className="whitespace-nowrap">
           記録する
         </LinkButton>
-        <form action={signOutAction}>
-          <Button
-            type="submit"
-            variant="secondary"
-            size="sm"
-            className="whitespace-nowrap"
-          >
-            ログアウト
-          </Button>
-        </form>
+        {userProfile ? (
+          <HeaderUserMenu
+            displayName={userProfile.displayName}
+            username={userProfile.username}
+            avatarUrl={userProfile.avatarUrl}
+            signOutAction={signOutAction}
+          />
+        ) : (
+          <>
+            <NavLink href="/settings/profile">プロフィール設定</NavLink>
+            <form action={signOutAction}>
+              <Button
+                type="submit"
+                variant="secondary"
+                size="sm"
+                className="whitespace-nowrap"
+              >
+                ログアウト
+              </Button>
+            </form>
+          </>
+        )}
       </div>
 
-      <MobileMenu
-        menuId={menuId}
-        open={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        onToggle={() => setMenuOpen((current) => !current)}
-      >
-        <MobileNavLink
-          href="/records"
-          onNavigate={() => setMenuOpen(false)}
+      <div className="flex items-center gap-1.5 sm:hidden">
+        {userProfile ? (
+          <HeaderUserMenu
+            displayName={userProfile.displayName}
+            username={userProfile.username}
+            avatarUrl={userProfile.avatarUrl}
+            signOutAction={signOutAction}
+          />
+        ) : null}
+        <MobileMenu
+          menuId={menuId}
+          open={menuOpen}
+          onClose={() => setMenuOpen(false)}
+          onToggle={() => setMenuOpen((current) => !current)}
         >
-          タイムライン
-        </MobileNavLink>
-        <MobileNavLink
-          href="/settings/profile"
-          onNavigate={() => setMenuOpen(false)}
-        >
-          プロフィール設定
-        </MobileNavLink>
-        <LinkButton
-          href="/records/new"
-          size="sm"
-          fullWidth
-          className="whitespace-nowrap"
-          onClick={() => setMenuOpen(false)}
-        >
-          記録する
-        </LinkButton>
-        <form action={signOutAction} className="w-full">
-          <Button
-            type="submit"
-            variant="secondary"
+          <MobileNavLink
+            href="/records"
+            onNavigate={() => setMenuOpen(false)}
+          >
+            タイムライン
+          </MobileNavLink>
+          {!userProfile ? (
+            <MobileNavLink
+              href="/settings/profile"
+              onNavigate={() => setMenuOpen(false)}
+            >
+              プロフィール設定
+            </MobileNavLink>
+          ) : null}
+          <LinkButton
+            href="/records/new"
             size="sm"
             fullWidth
             className="whitespace-nowrap"
+            onClick={() => setMenuOpen(false)}
           >
-            ログアウト
-          </Button>
-        </form>
-      </MobileMenu>
+            記録する
+          </LinkButton>
+          {!userProfile ? (
+            <form action={signOutAction} className="w-full">
+              <Button
+                type="submit"
+                variant="secondary"
+                size="sm"
+                fullWidth
+                className="whitespace-nowrap"
+              >
+                ログアウト
+              </Button>
+            </form>
+          ) : null}
+        </MobileMenu>
+      </div>
     </>
   );
 }
