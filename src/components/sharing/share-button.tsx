@@ -8,6 +8,7 @@ import {
   getPairFoodNames,
 } from "@/lib/sharing/build-share-text";
 import type { SakememRecord } from "@/lib/types/record";
+import { copyToClipboard } from "@/lib/utils/copy-to-clipboard";
 
 type ShareButtonProps = {
   record: SakememRecord;
@@ -29,7 +30,8 @@ export function ShareButton({
   });
 
   async function copyUrl() {
-    await navigator.clipboard.writeText(shareText);
+    const ok = await copyToClipboard(shareText);
+    if (!ok) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -50,7 +52,7 @@ export function ShareButton({
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button type="button" variant="secondary" size="sm" onClick={copyUrl}>
+      <Button type="button" variant="secondary" size="sm" onClick={() => void copyUrl()}>
         {copied ? "コピーしました" : "共有文をコピー"}
       </Button>
       <Button type="button" variant="secondary" size="sm" onClick={shareOnX}>

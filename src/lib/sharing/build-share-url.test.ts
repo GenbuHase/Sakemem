@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import {
   buildProfileUrl,
   buildRecordShareUrl,
+  getSiteUrl,
 } from "./build-share-url";
 
 describe("build-share-url", () => {
@@ -25,5 +26,11 @@ describe("build-share-url", () => {
     expect(buildProfileUrl("genbu")).toBe(
       "https://sakemem.example.com/@genbu",
     );
+  });
+
+  it("falls back to localhost when NEXT_PUBLIC_SITE_URL is unset", () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "";
+    expect(getSiteUrl()).toBe("http://localhost:3000");
+    expect(buildProfileUrl("genbu")).toBe("http://localhost:3000/@genbu");
   });
 });

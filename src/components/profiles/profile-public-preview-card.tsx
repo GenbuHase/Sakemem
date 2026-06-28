@@ -4,6 +4,7 @@ import { useState } from "react";
 import { LinkButton } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/section-card";
 import { buildProfileUrl } from "@/lib/sharing/build-share-url";
+import { copyToClipboard } from "@/lib/utils/copy-to-clipboard";
 
 type ProfilePublicPreviewCardProps = {
   liveUsername: string;
@@ -24,7 +25,8 @@ export function ProfilePublicPreviewCard({
     : null;
 
   async function copyUrl() {
-    await navigator.clipboard.writeText(liveUrl);
+    const ok = await copyToClipboard(liveUrl);
+    if (!ok) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }

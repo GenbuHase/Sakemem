@@ -1,9 +1,12 @@
 export function getSiteUrl(): string {
   const base = process.env.NEXT_PUBLIC_SITE_URL;
-  if (!base) {
-    throw new Error("NEXT_PUBLIC_SITE_URL is not set");
+  if (base) {
+    return base.replace(/\/$/, "");
   }
-  return base.replace(/\/$/, "");
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  return "http://localhost:3000";
 }
 
 export function buildRecordShareUrl(
