@@ -14,7 +14,9 @@
 
 | 項目 | 内容 |
 | :--- | :--- |
-| プロフィール | `profiles` テーブル、`username`（公開 URL 用）、表示名・bio |
+| プロフィール | `profiles` テーブル、`username`（公開 URL 用）、`display_name`、`avatar_url`、`bio` |
+| プロフィール編集 | `/settings/profile` — `username` / `display_name` / `avatar_url` / `bio` の変更 |
+| プロフィール画像 | Supabase Storage `profile-images` → `profiles.avatar_url` |
 | 公開範囲 | 記録ごとに `private` / `unlisted` / `public`（デフォルト `private`） |
 | 場所マスク | `hide_place_when_shared` — 共有時に `place` を非表示 |
 | 公開プロフィール | `/@username` — `public` 記録のみ一覧（ペアカード） |
@@ -30,7 +32,7 @@
 - `visibility = 'friends'`（DB にも入れない。3 値のみ）
 - `/feed`、`/friends`、`/recommendations`
 - ウィッシュリスト、おすすめ集約サジェスト
-- `username` 変更と旧 URL リダイレクト（初版は不可）
+- 旧 `username` からの URL リダイレクト（変更後の旧 URL は 404）
 - 全文検索・銘柄マスター・アフィリエイト
 
 ### 1.3 プロダクト上の振る舞い
@@ -50,14 +52,15 @@ public    → 誰でも。プロフィール一覧 + 直接 URL の両方から�
 | 区分 | 人日 |
 | :--- | ---: |
 | Step 1: profiles + オンボーディング | 3.5〜4.5 |
+| Step 1b: プロフィール設定 + 画像アップロード | 2.0〜3.0 |
 | Step 2: visibility + 共有取得（DB / RLS） | 2.5〜3.5 |
 | Step 3: 公開ページ（プロフィール・共有記録） | 3.5〜4.5 |
 | Step 4: 動的 OGP（メタデータ + OG 画像） | 2.5〜3.5 |
 | Step 5: 編集 UI + 共有ボタン | 2.0〜2.5 |
 | Step 6: QA・ドキュメント・本番検証 | 1.5〜2.0 |
-| **合計** | **15.5〜20.5 人日** |
+| **合計** | **17.5〜23.5 人日** |
 
-**カレンダー換算:** 1 人フルタイムで **約 3〜4 週間**。
+**カレンダー換算:** 1 人フルタイムで **約 3.5〜5 週間**。
 
 動的 OGP は静的 1 枚案（設計メモ）より **+2.5〜3.5 人日** 増。フォント読み込み・日本語レンダリング・Vercel 上でのプレビュー検証が主な追加工数。
 
@@ -120,12 +123,12 @@ graph TD
 -- profiles
 CREATE TABLE public.profiles (
   id           uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  username     text        NOT NULL,
-  display_name text        NOT NULL,
-  avatar_url   text,
-  bio          text,
-  created_at   timestamptz NOT NULL DEFAULT now(),
-  updated_at   timestamptz NOT NULL DEFAULT now(),
+  username            text        NOT NULL,
+  display_name        text        NOT NULL,
+  avatar_url          text,                  -- プロフィール画像 URL（Storage 公開 URL）
+  bio                 text,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now(),
 
   CONSTRAINT profiles_username_format CHECK (
     username ~ '^[a-zA-Z0-9_-]{3,30}$'
@@ -147,6 +150,11 @@ ALTER TABLE public.records
 CREATE INDEX records_user_public_idx
   ON public.records (user_id, date DESC, created_at DESC)
   WHERE visibility = 'public';
+
+-- プロフィール画像用 Storage（マイグレーションまたは Dashboard で作成）
+-- バケット名: profile-images（public: true）
+-- パス例: {user_id}/{uuid}.webp
+-- RLS: authenticated のみ自分の user_id プレフィックスへ INSERT/UPDATE/DELETE
 ```
 
 **`friends` は初版では CHECK に含めない。** Phase B 時に `ALTER` で追加する。
@@ -326,8 +334,9 @@ export function buildProfileUrl(username: string): string {
 ```
 src/lib/
 ├── profiles/
-│   ├── repository.ts       # CRUD（認証済み）
+│   ├── repository.ts           # CRUD（認証済み）
 │   ├── validate-username.ts
+│   ├── upload-avatar.ts        # Storage アップロード・リサイズ
 │   └── types.ts
 ├── sharing/
 │   ├── build-share-url.ts
@@ -342,10 +351,13 @@ src/lib/
 
 src/app/
 ├── actions/
-│   └── profiles.ts         # createProfile, updateProfile
+│   └── profiles.ts         # createProfile, updateProfile, uploadAvatar
 ├── onboarding/
 │   └── profile/
-│       └── page.tsx        # username 初回設定
+│       └── page.tsx        # 初回プロフィール設定
+├── settings/
+│   └── profile/
+│       └── page.tsx        # プロフィール編集
 └── profile/
     ├── layout.tsx          # 公開用レイアウト（Header 簡略化検討）
     └── [username]/
@@ -356,6 +368,10 @@ src/app/
             └── opengraph-image.tsx
 
 src/components/
+├── profiles/
+│   ├── profile-settings-form.tsx   # オンボーディング・設定で共用
+│   ├── profile-avatar-upload.tsx   # avatar_url 選択・プレビュー
+│   └── username-field.tsx          # 利用可否チェック付き入力
 └── sharing/
     ├── share-button.tsx
     └── visibility-selector.tsx
@@ -374,17 +390,22 @@ src/components/
 | `src/components/records/record-detail.tsx` | 投稿者表示、`hidePlace`、共有向け props |
 | `src/components/records/timeline.tsx` | 共有ボタン（条件付き表示） |
 | `src/app/layout.tsx` | `metadataBase`, title template |
+| `src/components/layout/header.tsx`（等） | 「プロフィール設定」リンク追加 |
 | 各 `page.tsx` の `metadata` | ページ別 OGP / robots（§7） |
 
 ### 6.3 Server Actions — revalidatePath
 
-記録の `visibility` 変更・更新・削除時に、影響する公開 URL を再検証する。
+記録の `visibility` 変更・更新・削除時、およびプロフィール更新時に、影響する公開 URL を再検証する。
 
 ```ts
 revalidatePath(`/@${username}`);           // 外部 URL 形式で指定
 revalidatePath(`/@${username}/${recordId}`);
+// username 変更時は旧 username のパスも revalidate（404 に更新）
+revalidatePath(`/@${oldUsername}`);
 // 内部パスでも可: /profile/${username} 等 — 実装時にどちらが効くか build で確認
 ```
+
+プロフィールの `display_name` / `avatar_url` / `bio` 変更時は `revalidatePath(\`/@${username}\`)` と、当該ユーザーの `public` / `unlisted` 記録共有 URL をまとめて再検証する（件数が多い場合は username 単位の再検証のみでも可）。
 
 ---
 
@@ -440,7 +461,7 @@ robots: record.visibility === "public"
 | 蔵元 / メーカー | `record.producer` |
 | 総合評価 | `★{rating}` または「評価なし」 |
 | ペアおつまみ | `pair_id` から取得した food の `name`（「合わせて: …」） |
-| 投稿者 | `@username` または `display_name` |
+| 投稿者 | `@username` または `display_name` + `avatar_url`（小） |
 | フッター | `Sakemem` ロゴテキスト |
 
 **描画しない:** `place`（マスク方針と一致）、`comment` 全文（description に短く載せる）、メールアドレス。
@@ -462,6 +483,7 @@ robots: record.visibility === "public"
 | 要素 | ソース |
 | :--- | :--- |
 | 表示名 | `display_name` |
+| プロフィール画像 | `avatar_url`（あれば円形クロップで描画） |
 | @username | `username` |
 | bio 抜粋 | 先頭 80 文字 |
 | 公開記録数 | `get_public_profile_records` の件数（別 COUNT RPC でも可） |
@@ -533,10 +555,11 @@ export const metadata: Metadata = {
 
 ### 8.3 公開プロフィールページ
 
-- ヘッダー: 表示名、`@username`、bio（任意）
+- ヘッダー: `avatar_url`（またはプレースホルダー）、表示名、`@username`、bio（任意）
 - 本文: `public` 記録を `groupRecordsForTimeline` でペア表示
 - 空状態: 「まだ公開されている記録はありません」
 - 認証不要。編集・削除ボタンなし
+- 本人がログイン中に自分の公開プロフィールを見た場合、ヘッダーに「プロフィールを編集」→ `/settings/profile` を表示（任意・推奨）
 
 ### 8.4 記録共有ページ
 
@@ -551,9 +574,73 @@ export const metadata: Metadata = {
 | :--- | :--- |
 | username | 3〜30 文字、`[a-zA-Z0-9_-]`、一意 |
 | display_name | 必須、1〜50 文字程度 |
+| avatar_url | 任意（スキップ可） |
 | bio | 任意 |
 
-登録直後（メール確認完了 → `/records`）および既存ユーザーの初回ログインで誘導。
+登録直後（メール確認完了 → `/records`）および既存ユーザーの初回ログインで誘導。フォーム UI は §8.6 と `profile-settings-form.tsx` を共用する。
+
+### 8.6 プロフィール設定（`/settings/profile`）
+
+認証必須。オンボーディング完了後いつでもアクセス可能。
+
+#### ルーティング・導線
+
+| 導線 | 説明 |
+| :--- | :--- |
+| ヘッダー / アカウントメニュー | 「プロフィール設定」 |
+| 自分の公開プロフィール | 「プロフィールを編集」（本人のみ） |
+| オンボーディング | 初回のみ。完了後は `/settings/profile` へリダイレクト可 |
+
+`proxy.ts` の保護対象に `/settings/*` を追加する（未ログインは `/login` へ）。
+
+#### フォームフィールド
+
+| フィールド | コンポーネント | バリデーション | 備考 |
+| :--- | :--- | :--- | :--- |
+| `avatar_url` | `profile-avatar-upload.tsx` | JPEG/PNG/WebP、≤ 2 MB | 未設定時は頭文字プレースホルダー |
+| `display_name` | テキスト input | 必須、1〜50 文字 | 前後空白 trim |
+| `username` | `username-field.tsx` | 3〜30、`^[a-zA-Z0-9_-]+$`、一意 | 変更時は確認ダイアログ |
+| `bio` | textarea | 任意、0〜200 文字程度 | |
+
+#### `username` 変更フロー
+
+1. ユーザーが新 username を入力 → debounce 後に `checkUsernameAvailable`（Server Action または RPC）
+2. 「保存」押下 → `username` が変わる場合はモーダルで URL 変更を確認
+3. Server Action `updateProfile`:
+   - 一意性チェック後に `profiles` を更新
+   - 旧 username はリダイレクトせず 404
+4. 成功後: トースト + `revalidatePath` + 新 `/@username` へのリンク表示
+
+#### `avatar_url` アップロードフロー
+
+1. ファイル選択 → クライアントでプレビュー（`URL.createObjectURL`）
+2. 保存時: `uploadAvatar` Server Action
+   - 画像をサーバー側で正方形リサイズ（512px）・WebP 化（`sharp` 等）
+   - Storage `profile-images/{user_id}/{uuid}.webp` にアップロード
+   - 返却 URL を `profiles.avatar_url` に保存
+3. 「画像を削除」: `avatar_url = NULL`（Storage オブジェクトの削除はベストエフォート）
+
+#### Server Actions 概要
+
+```ts
+// src/app/actions/profiles.ts
+export async function createProfile(data: CreateProfileInput): Promise<ActionResult>;
+export async function updateProfile(data: UpdateProfileInput): Promise<ActionResult>;
+export async function checkUsernameAvailable(username: string): Promise<{ available: boolean }>;
+export async function uploadAvatar(formData: FormData): Promise<ActionResult<{ url: string }>>;
+export async function removeAvatar(): Promise<ActionResult>;
+```
+
+`updateProfile` は `display_name` / `bio` / `username` / `avatar_url` を部分更新可能にする。
+
+#### エラー表示
+
+| エラー | 表示 |
+| :--- | :--- |
+| username 重複 | 「このユーザー名は使用されています」 |
+| username 形式不正 | フィールド下に形式説明 |
+| 画像サイズ超過 | 「2 MB 以下の画像を選んでください」 |
+| Storage 失敗 | トーストで一般エラー |
 
 ---
 
@@ -567,6 +654,8 @@ export const metadata: Metadata = {
 | 列挙攻撃 | UUID v4 + username 一致検証。失敗時はすべて 404（403 にしない） |
 | Server Actions | 引き続き `requireUser()`。クライアントの `user_id` は信頼しない |
 | `visibility` 改ざん | UPDATE は既存 RLS `records_update_own` のまま |
+| プロフィール画像 | Storage RLS で `{user_id}/` プレフィックスのみ書き込み可。公開 URL は読み取り専用 |
+| `username` スカッティング | 利用可否 API は存在有無のみ返す（登録済み username の列挙を避けるため、詳細エラーは出さない） |
 
 ---
 
@@ -580,6 +669,17 @@ export const metadata: Metadata = {
 - [ ] `src/app/onboarding/profile/page.tsx` + フォーム
 - [ ] `proxy.ts` — プロフィール未設定時 `/onboarding/profile` へ（方針 §4.4 に従う）
 - [ ] `validate-username.test.ts`
+
+### Step 1b: プロフィール設定 + 画像（2.0〜3.0 人日）
+
+- [ ] Storage バケット `profile-images` + RLS ポリシー
+- [ ] `upload-avatar.ts` — リサイズ・WebP 化・アップロード
+- [ ] `profile-settings-form.tsx` / `profile-avatar-upload.tsx` / `username-field.tsx`
+- [ ] `src/app/settings/profile/page.tsx`
+- [ ] `updateProfile` / `checkUsernameAvailable` / `uploadAvatar` / `removeAvatar`
+- [ ] ヘッダーからの導線、公開プロフィールの「編集」リンク（本人のみ）
+- [ ] オンボーディングフォームを共用コンポーネントにリファクタ
+- [ ] `upload-avatar.test.ts`（MIME・サイズバリデーション）
 
 ### Step 2: visibility + RPC（2.5〜3.5 人日）
 
@@ -630,9 +730,9 @@ export const metadata: Metadata = {
 
 | 種別 | 対象 |
 | :--- | :--- |
-| 単体 | `validate-username`, `build-share-url`, `build-share-text`, `mask-record` |
+| 単体 | `validate-username`, `build-share-url`, `build-share-text`, `mask-record`, `upload-avatar` |
 | 単体（既存パターン） | `groupRecordsForTimeline` — 公開記録のペア結合 |
-| 手動 | RPC + 各 visibility、OG 画像の日本語、X intent |
+| 手動 | RPC + 各 visibility、OG 画像の日本語、X intent、プロフィール画像アップロード・username 変更 |
 | E2E | 初版では省略（Vitest のみ） |
 
 ---
@@ -662,6 +762,8 @@ CREATE TABLE public.friendships (...);
 | ペアの片方が `private` のとき | 共有対象レコードのみ単体表示 |
 | プロフィール一覧の件数上限 | 50 件 + 「もっと見る」は初版なし |
 | オンボーディング強制度 | 記録は可、共有は username 必須 |
+| `username` 変更 | 旧 URL は 404（リダイレクトなし） |
+| `avatar_url` 未設定時 | 表示名頭文字のプレースホルダー |
 | `unlisted` の検索エンジン | `noindex` |
 | 公開プロフィールの Header | ログインリンクのみの簡易ヘッダー |
 

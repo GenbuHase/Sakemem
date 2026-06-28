@@ -46,8 +46,9 @@ Sakemem を「SNS」にするのではなく、**信頼できる人の晩酌ノ�
 | 公開プロフィール `/@username` | **実装する**（`public` 記録のみ一覧） |
 | OGP | **動的生成**（`@vercel/og` で記録・プロフィールごとに OG 画像） |
 | 公開範囲（Phase A） | **`private` / `unlisted` / `public` の 3 値のみ**（`friends` は DB に入れない） |
-| `username` 変更 | **初版は不可** |
-| 工数目安 | **15.5〜20.5 人日**（詳細は [sharing-implementation-plan.md](./sharing-implementation-plan.md) §2） |
+| プロフィール編集 | **`username` / `display_name` / `avatar_url` を設定画面から変更可**（詳細は §4.9） |
+| `username` 変更 | **可**（旧 URL リダイレクトなし） |
+| 工数目安 | **17.5〜23.5 人日**（詳細は [sharing-implementation-plan.md](./sharing-implementation-plan.md) §2） |
 
 ## 3. 公開範囲
 
@@ -169,10 +170,10 @@ App Router では `@` で始まるディレクトリ名は Parallel Routes 用�
 -- プロフィール（auth.users の拡張）
 CREATE TABLE public.profiles (
   id           uuid        PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  username     text        UNIQUE NOT NULL,  -- 公開 URL 用
-  display_name text        NOT NULL,
-  avatar_url   text,
-  bio          text,
+  username      text        UNIQUE NOT NULL,  -- 公開 URL 用
+  display_name  text        NOT NULL,
+  avatar_url    text,                        -- プロフィール画像 URL（Supabase Storage）
+  bio           text,
   created_at   timestamptz NOT NULL DEFAULT now(),
   updated_at   timestamptz NOT NULL DEFAULT now()
 );
@@ -209,9 +210,10 @@ SQL 全文は [sharing-implementation-plan.md](./sharing-implementation-plan.md)
 | :--- | :--- |
 | 記録編集画面 | 公開範囲セレクタ、`hide_place_when_shared` チェック |
 | 記録詳細 / タイムライン | 「共有」ボタン → URL コピー / X intent |
-| `/@[username]` | 表示名・bio・公開記録一覧（ペアカード） |
+| `/@[username]` | プロフィール画像・表示名・bio・公開記録一覧（ペアカード） |
 | `/@[username]/[id]` | 共有専用レイアウト（`RecordDetail` `showActions={false}`） |
 | 新規登録後 / 既存ユーザー初回ログイン | `profiles` 作成フロー（`username` 必須）。記録は可、共有は username 設定後 |
+| `/settings/profile` | プロフィール編集（`username` / `display_name` / `avatar_url` / `bio`）— §4.9 |
 
 ### 4.8 既存コードとの接続
 
@@ -226,14 +228,91 @@ SQL 全文は [sharing-implementation-plan.md](./sharing-implementation-plan.md)
 
 ```
 src/lib/sharing/              # 共有 URL・テキスト・RPC ラッパー
-src/lib/profiles/             # プロフィール CRUD
+src/lib/profiles/             # プロフィール CRUD・画像アップロード
 src/lib/metadata/             # OGP メタデータ組み立て
 src/app/profile/[username]/           # 公開プロフィール + opengraph-image.tsx
 src/app/profile/[username]/[id]/      # 共有記録 + opengraph-image.tsx
-src/app/onboarding/profile/           # username 初回設定
+src/app/onboarding/profile/           # 初回プロフィール設定
+src/app/settings/profile/             # プロフィール編集
+src/components/profiles/              # 設定フォーム・アバターアップロード
 src/proxy.ts                          # /@username → /profile/username へ rewrite
 supabase/migrations/005_sharing_and_profiles.sql
 ```
+
+### 4.9 プロフィール編集（公開向け）
+
+公開プロフィール `/@username` に載る見た目を、本人がいつでも調整できるようにする。オンボーディング（初回設定）と設定画面（継続編集）で **同じフォーム部品** を共有する。
+
+#### 4.9.1 編集可能フィールド
+
+| フィールド | DB カラム | 公開面での表示 | 変更時の影響 |
+| :--- | :--- | :--- | :--- |
+| ユーザー名 | `username` | `/@username` の URL・OGP の `@username` | **共有 URL がすべて変わる**（旧 URL は 404） |
+| 表示名 | `display_name` | プロフィールヘッダー・記録共有ページの投稿者名・OGP | URL には影響しない |
+| プロフィール画像 | `avatar_url` | プロフィールヘッダー・アバター・OGP（任意） | URL には影響しない |
+| 自己紹介 | `bio` | プロフィールヘッダー・OGP 抜粋 | URL には影響しない |
+
+`avatar_url` が未設定のときは、表示名の頭文字を使った **プレースホルダーアバター**（CSS / SVG）を表示する。メールアドレスや `auth.users` のメタデータは公開面に出さない。
+
+#### 4.9.2 `username` 変更のルール
+
+初版から変更を許可する。変更時は次を守る。
+
+- **形式:** 3〜30 文字、`[a-zA-Z0-9_-]` のみ（オンボーディングと同一）
+- **一意性:** `lower(username)` でユニーク（大文字小文字は区別しない）
+- **確認 UI:** 保存前に「共有 URL が `/@{新username}` に変わり、旧 URL は使えなくなる」旨を明示
+- **旧 URL:** リダイレクトは **初版では実装しない**（404）。将来 `username_aliases` テーブルで対応可能
+
+#### 4.9.3 `avatar_url` の保存方針
+
+- **保存先:** Supabase Storage バケット `profile-images`（公開読み取り）
+- **パス:** `{user_id}/{uuid}.webp`（上書きではなく新規オブジェクト。DB の URL のみ更新）
+- **制約:** JPEG / PNG / WebP、最大 2 MB。サーバー側でリサイズ（正方形 512px 程度）して WebP 化を推奨
+- **削除:** 「画像を削除」で `avatar_url` を `NULL` にし、Storage 上のオブジェクトは非同期クリーンアップ（初版は DB のみ NULL でも可）
+
+#### 4.9.4 設定画面 UI（`/settings/profile`）
+
+認証必須。ヘッダーの「プロフィール設定」またはアカウントメニューから遷移。
+
+```
+┌─────────────────────────────────────────┐
+│  プロフィール設定                        │
+├─────────────────────────────────────────┤
+│  [ 画像プレビュー ]  [ 画像を選ぶ ]      │
+│                      [ 画像を削除 ]      │
+│  推奨: 正方形・512px 以上                │
+├─────────────────────────────────────────┤
+│  表示名 *                                │
+│  [________________________]              │
+├─────────────────────────────────────────┤
+│  ユーザー名 *                            │
+│  sakemem.example.com/@ [________]       │
+├─────────────────────────────────────────┤
+│  自己紹介（任意）                        │
+│  [________________________]              │
+│  [________________________]              │
+├─────────────────────────────────────────┤
+│  公開プロフィール: /@genbu  [プレビュー] │
+│                                         │
+│              [ 保存する ]                │
+└─────────────────────────────────────────┘
+```
+
+- **画像:** クリックまたはドラッグ＆ドロップで選択 → クライアントでプレビュー → 保存時に Storage アップロード → 返却 URL を `avatar_url` に保存
+- **ユーザー名:** 入力中に利用可否を非同期チェック（debounce）。変更時は確認ダイアログ
+- **保存後:** トースト表示 + `revalidatePath` で公開プロフィール・該当記録の OGP キャッシュを更新
+- **username 変更時:** 新 `/@username` へのリンクを結果画面で案内
+
+オンボーディング（`/onboarding/profile`）は上記のうち **画像・表示名・ユーザー名・bio** を必須/任意の組み合わせで初回のみ表示。`avatar_url` はオンボーディングでは **任意**（スキップ可）。
+
+#### 4.9.5 API・実装の接続
+
+| 処理 | 実装 |
+| :--- | :--- |
+| プロフィール取得（本人） | `profiles` を RLS `auth.uid() = id` で SELECT |
+| プロフィール更新 | Server Action `updateProfile` — `display_name` / `bio` / `username`（一意性チェック付き） |
+| 画像アップロード | 署名付き URL または Server Action 経由で Storage に PUT → 返却 URL を `avatar_url` に保存 |
+| 公開面 | 既存 RPC `get_public_profile` 等が `avatar_url` を返す |
 
 ## 5. Phase B: アプリ内フォロー（将来・大規模）
 
@@ -271,6 +350,7 @@ Phase A の実装ステップ（チェックリスト付き）は [sharing-imple
 | Step | 内容 | 依存 |
 | :--- | :--- | :--- |
 | Step 1 | `profiles`、オンボーディング、`username` バリデーション | — |
+| Step 1b | プロフィール設定画面、`avatar_url` Storage、プロフィール更新 Action | Step 1 |
 | Step 2 | `visibility`、SECURITY DEFINER RPC | Step 1 |
 | Step 3 | 公開プロフィール・共有記録ページ、`proxy.ts` rewrite | Step 2 |
 | Step 4 | 動的 OGP（`generateMetadata` + `opengraph-image.tsx`） | Step 3 |
@@ -283,7 +363,9 @@ Phase A の実装ステップ（チェックリスト付き）は [sharing-imple
 ### 決定済み（2026-06-28）
 
 - [x] 公開プロフィールに載せる記録: **`public` のみ**（`unlisted` はプロフィール一覧に出さない）
-- [x] `username` 変更: **初版は不可**
+- [x] プロフィール編集: **`/settings/profile` で `username` / `display_name` / `avatar_url` を変更可**
+- [x] `username` 変更: **可**（旧 URL リダイレクトなし）
+- [x] プロフィール画像: **Supabase Storage `profile-images`**（`avatar_url` カラムに URL）
 - [x] OG 画像: **動的生成**（`@vercel/og`）
 - [x] アプリ内 SNS: **Phase A では実装しない**
 - [x] `friends` visibility: **Phase A では DB にも入れない**
