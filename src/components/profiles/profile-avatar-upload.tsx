@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { uploadAvatar } from "@/app/actions/profiles";
+import { removeAvatar, uploadAvatar } from "@/app/actions/profiles";
 import { Button } from "@/components/ui/button";
 import { validateAvatarFile } from "@/lib/profiles/upload-avatar";
 import { ProfileAvatar } from "./profile-avatar";
@@ -23,6 +23,9 @@ export function ProfileAvatarUpload({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const busy = uploading || removing;
 
   const shownUrl = previewUrl ?? avatarUrl ?? null;
 
@@ -42,6 +45,9 @@ export function ProfileAvatarUpload({
 
     const formData = new FormData();
     formData.set("avatar", file);
+    if (avatarUrl) {
+      formData.set("previous_avatar_url", avatarUrl);
+    }
     const result = await uploadAvatar(formData);
 
     setUploading(false);
@@ -56,6 +62,32 @@ export function ProfileAvatarUpload({
     if (result.url) {
       setPreviewUrl(null);
       onAvatarUrlChange(result.url);
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
+    }
+  }
+
+  async function handleRemove() {
+    const urlToRemove = avatarUrl;
+    setError(null);
+    setPreviewUrl(null);
+    setRemoving(true);
+    onUploadingChange?.(true);
+
+    const result = await removeAvatar(urlToRemove);
+
+    setRemoving(false);
+    onUploadingChange?.(false);
+
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+
+    onAvatarUrlChange(null);
+    if (inputRef.current) {
+      inputRef.current.value = "";
     }
   }
 
@@ -82,7 +114,7 @@ export function ProfileAvatarUpload({
           type="button"
           variant="secondary"
           size="sm"
-          disabled={uploading}
+          disabled={busy}
           onClick={() => inputRef.current?.click()}
         >
           {uploading ? "アップロード中..." : "画像を選ぶ"}
@@ -92,12 +124,12 @@ export function ProfileAvatarUpload({
             type="button"
             variant="secondary"
             size="sm"
+            disabled={busy}
             onClick={() => {
-              setPreviewUrl(null);
-              onAvatarUrlChange(null);
+              void handleRemove();
             }}
           >
-            画像を削除
+            {removing ? "削除中..." : "画像を削除"}
           </Button>
         ) : null}
         <p className="text-xs text-zinc-500">推奨: 正方形・512px 以上</p>

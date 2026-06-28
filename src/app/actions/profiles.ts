@@ -16,6 +16,7 @@ import {
   validateUsernameFormat,
 } from "@/lib/profiles/validate-username";
 import { validateAvatarFile } from "@/lib/profiles/upload-avatar";
+import { deleteStoredAvatar } from "@/lib/profiles/delete-avatar-storage";
 import { buildProfileUrl } from "@/lib/sharing/build-share-url";
 
 export type ProfileActionState = {
@@ -155,6 +156,9 @@ export async function updateProfile(
     }
 
     const updated = await updateProfileByUserId(supabase, user.id, patch);
+    if (existing.avatar_url && existing.avatar_url !== updated.avatar_url) {
+      await deleteStoredAvatar(supabase, user.id, existing.avatar_url);
+    }
     revalidatePublicProfile(updated.username, existing.username);
 
     return {
@@ -225,9 +229,17 @@ export async function uploadAvatar(
     } = supabase.storage.from("profile-images").getPublicUrl(objectPath);
 
     const existing = await fetchProfileByUserId(supabase, user.id);
+    const previousUrlRaw =
+      existing?.avatar_url ??
+      String(formData.get("previous_avatar_url") ?? "").trim();
+    const previousUrl = previousUrlRaw || null;
     if (existing) {
       await updateProfileByUserId(supabase, user.id, { avatar_url: publicUrl });
       revalidatePublicProfile(existing.username);
+    }
+
+    if (previousUrl && previousUrl !== publicUrl) {
+      await deleteStoredAvatar(supabase, user.id, previousUrl);
     }
 
     return { url: publicUrl };
@@ -237,15 +249,23 @@ export async function uploadAvatar(
   }
 }
 
-export async function removeAvatar(): Promise<ProfileActionState> {
+export async function removeAvatar(
+  currentUrl?: string | null,
+): Promise<ProfileActionState> {
   const { supabase, user } = await requireUser();
   const existing = await fetchProfileByUserId(supabase, user.id);
-  if (!existing) {
-    return { error: "プロフィールが見つかりません。" };
+  const urlToDelete = existing?.avatar_url ?? currentUrl ?? null;
+
+  if (!existing && !urlToDelete) {
+    return {};
   }
 
-  await updateProfileByUserId(supabase, user.id, { avatar_url: null });
-  revalidatePublicProfile(existing.username);
+  if (existing) {
+    await updateProfileByUserId(supabase, user.id, { avatar_url: null });
+    revalidatePublicProfile(existing.username);
+  }
+
+  await deleteStoredAvatar(supabase, user.id, urlToDelete);
 
   return { success: "プロフィール画像を削除しました。" };
 }
