@@ -87,7 +87,7 @@ export default async function PublicProfilePage({
           </p>
         </div>
       ) : (
-        <Timeline entries={entries} />
+        <Timeline entries={entries} showActions={false} />
       )}
 
       <p className="mt-8 text-center text-xs text-zinc-400">

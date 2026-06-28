@@ -8,6 +8,7 @@ type TimelineProps = {
   entries: TimelineEntry[];
   filtered?: boolean;
   shareUsername?: string | null;
+  showActions?: boolean;
 };
 
 function getPairRecordsForEntry(entry: TimelineEntry): SakememRecord[] {
@@ -21,6 +22,7 @@ export function Timeline({
   entries,
   filtered = false,
   shareUsername = null,
+  showActions = true,
 }: TimelineProps) {
   if (entries.length === 0) {
     return (
@@ -59,6 +61,7 @@ export function Timeline({
             <div className="grid gap-3 md:grid-cols-2">
               <RecordDetail
                 record={entry.record}
+                showActions={showActions}
                 shareUsername={shareUsername}
                 pairRecords={getPairRecordsForEntry(entry)}
               />
@@ -79,6 +82,7 @@ export function Timeline({
                     key={record.id}
                     record={record}
                     nested
+                    showActions={showActions}
                     shareUsername={shareUsername}
                     pairRecords={getPairRecordsForEntry(entry)}
                   />
@@ -88,6 +92,7 @@ export function Timeline({
                     key={record.id}
                     record={record}
                     nested
+                    showActions={showActions}
                     shareUsername={shareUsername}
                     pairRecords={getPairRecordsForEntry(entry)}
                   />
