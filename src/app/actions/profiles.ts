@@ -23,6 +23,7 @@ export type ProfileActionState = {
   error?: string;
   success?: string;
   profileUrl?: string;
+  username?: string;
 };
 
 function revalidatePublicProfile(username: string, oldUsername?: string): void {
@@ -164,6 +165,7 @@ export async function updateProfile(
     return {
       success: "プロフィールを保存しました。",
       profileUrl: buildProfileUrl(updated.username),
+      username: updated.username,
     };
   } catch (error) {
     return {

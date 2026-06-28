@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   createProfile,
   updateProfile,
@@ -32,7 +32,34 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
   );
   const [confirmUsernameChange, setConfirmUsernameChange] = useState(false);
   const [draftUsername, setDraftUsername] = useState(profile?.username ?? "");
+  const [liveUsername, setLiveUsername] = useState(profile?.username ?? "");
+  const [showUrlSavedNotice, setShowUrlSavedNotice] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+
+  useEffect(() => {
+    if (profile?.username) {
+      setLiveUsername(profile.username);
+    }
+  }, [profile?.username]);
+
+  useEffect(() => {
+    if (!state?.success || !state.username) return;
+
+    setConfirmUsernameChange(false);
+    setLiveUsername((prev) => {
+      if (prev !== state.username) {
+        setShowUrlSavedNotice(true);
+      }
+      return state.username!;
+    });
+    setDraftUsername(state.username);
+  }, [state?.success, state?.username]);
+
+  useEffect(() => {
+    if (!showUrlSavedNotice) return;
+    const timer = setTimeout(() => setShowUrlSavedNotice(false), 4000);
+    return () => clearTimeout(timer);
+  }, [showUrlSavedNotice]);
 
   let siteHost = "localhost:3000";
   try {
@@ -51,7 +78,7 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
       const newUsername = String(
         new FormData(form).get("username") ?? "",
       ).trim();
-      if (newUsername !== profile.username) {
+      if (newUsername !== liveUsername) {
         event.preventDefault();
         setConfirmUsernameChange(true);
         return;
@@ -67,8 +94,9 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
 
       {mode === "edit" && profile ? (
         <ProfilePublicPreviewCard
-          liveUsername={profile.username}
+          liveUsername={liveUsername}
           draftUsername={draftUsername}
+          showSavedNotice={showUrlSavedNotice}
         />
       ) : null}
 
@@ -94,7 +122,7 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
           />
           <UsernameField
             defaultValue={profile?.username}
-            originalUsername={profile?.username}
+            originalUsername={liveUsername}
             siteHost={siteHost}
             onUsernameChange={setDraftUsername}
           />
@@ -112,37 +140,25 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
       {state?.error ? (
         <FormMessage variant="error">{state.error}</FormMessage>
       ) : null}
-      {state?.success ? (
-        <FormMessage variant="success">
-          {state.success}
-          {state.profileUrl ? (
-            <>
-              {" "}
-              <a
-                href={state.profileUrl}
-                className="font-medium underline"
-              >
-                公開プロフィールを見る
-              </a>
-            </>
-          ) : null}
-        </FormMessage>
-      ) : null}
 
       {confirmUsernameChange ? (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-medium">ユーザー名を変更しますか？</p>
           <p className="mt-1">
-            共有 URL が変わり、旧 URL は使えなくなります。
+            <span className="font-mono">@{liveUsername}</span>
+            {" → "}
+            <span className="font-mono font-medium">@{draftUsername.trim()}</span>
+            {" "}に変更すると、共有 URL が変わり、旧 URL は使えなくなります。
           </p>
           <div className="mt-3 flex gap-2">
             <Button type="submit" size="sm" disabled={pending || avatarUploading}>
-              変更する
+              {pending ? "変更中..." : "変更する"}
             </Button>
             <Button
               type="button"
               variant="secondary"
               size="sm"
+              disabled={pending}
               onClick={() => setConfirmUsernameChange(false)}
             >
               キャンセル
@@ -160,6 +176,23 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
                 : "保存する"}
         </Button>
       )}
+
+      {state?.success ? (
+        <FormMessage variant="success">
+          {state.success}
+          {state.profileUrl ? (
+            <>
+              {" "}
+              <a
+                href={state.profileUrl}
+                className="font-medium underline"
+              >
+                公開プロフィールを見る
+              </a>
+            </>
+          ) : null}
+        </FormMessage>
+      ) : null}
     </form>
   );
 }

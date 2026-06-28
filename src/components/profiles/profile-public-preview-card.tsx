@@ -9,11 +9,13 @@ import { copyToClipboard } from "@/lib/utils/copy-to-clipboard";
 type ProfilePublicPreviewCardProps = {
   liveUsername: string;
   draftUsername?: string;
+  showSavedNotice?: boolean;
 };
 
 export function ProfilePublicPreviewCard({
   liveUsername,
   draftUsername,
+  showSavedNotice = false,
 }: ProfilePublicPreviewCardProps) {
   const [copied, setCopied] = useState(false);
   const liveUrl = buildProfileUrl(liveUsername);
@@ -37,6 +39,15 @@ export function ProfilePublicPreviewCard({
       description="他人から見えるページです。保存した内容がそのまま表示されます。"
     >
       <div className="space-y-3">
+        {showSavedNotice ? (
+          <p
+            role="status"
+            className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+          >
+            公開 URL を更新しました
+          </p>
+        ) : null}
+
         <div>
           <p className="mb-1.5 text-xs font-medium text-zinc-500">
             {hasPendingUsername ? "現在の公開 URL" : "公開 URL"}
