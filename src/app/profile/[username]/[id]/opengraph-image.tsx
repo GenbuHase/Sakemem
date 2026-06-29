@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { getCategoryLabel } from "@/lib/constants/categories";
 import { isFoodCategory } from "@/lib/constants/categories";
 import { loadOgFonts } from "@/lib/metadata/og-fonts";
+import { sanitizeOgText } from "@/lib/metadata/og-image-utils";
 import { siteName } from "@/lib/metadata/site";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -59,6 +60,11 @@ export default async function Image({ params }: Props) {
   }
 
   const fonts = await loadOgFonts();
+  const recordName = sanitizeOgText(record.name);
+  const producer = record.producer ? sanitizeOgText(record.producer) : null;
+  const pairLabelSanitized = pairLabel ? sanitizeOgText(pairLabel) : "";
+  const profileUsername = sanitizeOgText(record.profile_username);
+  const profileDisplayName = sanitizeOgText(record.profile_display_name);
   const rating =
     record.rating !== null ? `★${record.rating}` : "評価なし";
 
@@ -89,15 +95,28 @@ export default async function Image({ params }: Props) {
           >
             {getCategoryLabel(record.category)}
           </div>
-          <div style={{ fontSize: 56, fontWeight: 700, lineHeight: 1.2 }}>
-            {record.name}
+          <div
+            style={{
+              display: "flex",
+              fontSize: 56,
+              fontWeight: 700,
+              lineHeight: 1.2,
+            }}
+          >
+            {recordName}
           </div>
-          {record.producer ? (
-            <div style={{ fontSize: 28, opacity: 0.85 }}>{record.producer}</div>
+          {producer ? (
+            <div style={{ display: "flex", fontSize: 28, opacity: 0.85 }}>
+              {producer}
+            </div>
           ) : null}
-          <div style={{ fontSize: 36, color: "#fbbf24" }}>{rating}</div>
-          {pairLabel ? (
-            <div style={{ fontSize: 26, opacity: 0.9 }}>{pairLabel}</div>
+          <div style={{ display: "flex", fontSize: 36, color: "#fbbf24" }}>
+            {rating}
+          </div>
+          {pairLabelSanitized ? (
+            <div style={{ display: "flex", fontSize: 26, opacity: 0.9 }}>
+              {pairLabelSanitized}
+            </div>
           ) : null}
         </div>
 
@@ -111,7 +130,7 @@ export default async function Image({ params }: Props) {
           }}
         >
           <span>
-            @{record.profile_username} · {record.profile_display_name}
+            @{profileUsername} · {profileDisplayName}
           </span>
           <span>{siteName}</span>
         </div>

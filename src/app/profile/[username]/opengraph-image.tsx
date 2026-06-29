@@ -1,5 +1,9 @@
 import { ImageResponse } from "next/og";
 import { loadOgFonts } from "@/lib/metadata/og-fonts";
+import {
+  fetchOgAvatarDataUrl,
+  sanitizeOgText,
+} from "@/lib/metadata/og-image-utils";
 import { siteName } from "@/lib/metadata/site";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -44,9 +48,12 @@ export default async function Image({ params }: Props) {
 
   const records = await fetchPublicProfileRecords(supabase, username);
   const fonts = await loadOgFonts();
-  const bioPreview = profile.bio
-    ? profile.bio.slice(0, 80)
-    : "公開晩酌記録";
+  const avatarDataUrl = await fetchOgAvatarDataUrl(profile.avatar_url);
+  const displayName = sanitizeOgText(profile.display_name);
+  const usernameLabel = sanitizeOgText(profile.username);
+  const bioPreview = sanitizeOgText(
+    profile.bio ? profile.bio.slice(0, 80) : "公開晩酌記録",
+  );
 
   return new ImageResponse(
     (
@@ -64,10 +71,10 @@ export default async function Image({ params }: Props) {
         }}
       >
         <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
-          {profile.avatar_url ? (
+          {avatarDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={profile.avatar_url}
+              src={avatarDataUrl}
               alt=""
               width={120}
               height={120}
@@ -87,20 +94,33 @@ export default async function Image({ params }: Props) {
                 fontWeight: 700,
               }}
             >
-              {profile.display_name.charAt(0)}
+              {displayName.charAt(0) || "?"}
             </div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ fontSize: 52, fontWeight: 700 }}>
-              {profile.display_name}
+            <div
+              style={{
+                display: "flex",
+                fontSize: 52,
+                fontWeight: 700,
+              }}
+            >
+              {displayName}
             </div>
-            <div style={{ fontSize: 28, color: "#71717a" }}>
-              @{profile.username}
+            <div style={{ display: "flex", fontSize: 28, color: "#71717a" }}>
+              @{usernameLabel}
             </div>
           </div>
         </div>
 
-        <div style={{ fontSize: 28, lineHeight: 1.5, color: "#3f3f46" }}>
+        <div
+          style={{
+            display: "flex",
+            fontSize: 28,
+            lineHeight: 1.5,
+            color: "#3f3f46",
+          }}
+        >
           {bioPreview}
         </div>
 
