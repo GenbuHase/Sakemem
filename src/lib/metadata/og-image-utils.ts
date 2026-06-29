@@ -6,6 +6,8 @@ const OG_UNSUPPORTED_SYMBOL_RANGES: ReadonlyArray<[number, number]> = [
   [0x2500, 0x257f],
 ];
 
+export const OG_ELLIPSIS = "……";
+
 export function sanitizeOgText(text: string): string {
   return [...text]
     .filter((char) => {
@@ -21,6 +23,14 @@ export function sanitizeOgText(text: string): string {
       );
     })
     .join("");
+}
+
+export function truncateOgText(text: string, max: number): string {
+  const sanitized = sanitizeOgText(text);
+  if (sanitized.length <= max) {
+    return sanitized;
+  }
+  return `${sanitized.slice(0, max - OG_ELLIPSIS.length)}${OG_ELLIPSIS}`;
 }
 
 export async function fetchOgAvatarDataUrl(

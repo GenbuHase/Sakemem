@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { loadOgFonts } from "@/lib/metadata/og-fonts";
 import {
   fetchOgAvatarDataUrl,
-  sanitizeOgText,
+  truncateOgText,
 } from "@/lib/metadata/og-image-utils";
 import { siteName } from "@/lib/metadata/site";
 import { createClient } from "@/lib/supabase/server";
@@ -49,10 +49,11 @@ export default async function Image({ params }: Props) {
   const records = await fetchPublicProfileRecords(supabase, username);
   const fonts = await loadOgFonts();
   const avatarDataUrl = await fetchOgAvatarDataUrl(profile.avatar_url);
-  const displayName = sanitizeOgText(profile.display_name);
-  const usernameLabel = sanitizeOgText(profile.username);
-  const bioPreview = sanitizeOgText(
-    profile.bio ? profile.bio.slice(0, 80) : "公開晩酌記録",
+  const displayName = truncateOgText(profile.display_name, 28);
+  const usernameLabel = truncateOgText(profile.username, 32);
+  const bioPreview = truncateOgText(
+    profile.bio ?? "公開晩酌記録",
+    80,
   );
 
   return new ImageResponse(

@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { getCategoryLabel } from "@/lib/constants/categories";
 import { isFoodCategory } from "@/lib/constants/categories";
 import { loadOgFonts } from "@/lib/metadata/og-fonts";
-import { sanitizeOgText } from "@/lib/metadata/og-image-utils";
+import { truncateOgText } from "@/lib/metadata/og-image-utils";
 import { siteName } from "@/lib/metadata/site";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -60,11 +60,15 @@ export default async function Image({ params }: Props) {
   }
 
   const fonts = await loadOgFonts();
-  const recordName = sanitizeOgText(record.name);
-  const producer = record.producer ? sanitizeOgText(record.producer) : null;
-  const pairLabelSanitized = pairLabel ? sanitizeOgText(pairLabel) : "";
-  const profileUsername = sanitizeOgText(record.profile_username);
-  const profileDisplayName = sanitizeOgText(record.profile_display_name);
+  const recordName = truncateOgText(record.name, 32);
+  const producer = record.producer
+    ? truncateOgText(record.producer, 48)
+    : null;
+  const pairLabelSanitized = pairLabel
+    ? truncateOgText(pairLabel, 64)
+    : "";
+  const profileUsername = truncateOgText(record.profile_username, 24);
+  const profileDisplayName = truncateOgText(record.profile_display_name, 24);
   const rating =
     record.rating !== null ? `★${record.rating}` : "評価なし";
 
