@@ -1,3 +1,4 @@
+import type { ImageResponseOptions } from "@vercel/og";
 import { readFile } from "fs/promises";
 import path from "path";
 
@@ -27,7 +28,7 @@ function toArrayBuffer(data: Buffer): ArrayBuffer {
 export function buildOgImageOptions(
   fonts: OgFontData,
   size: { width: number; height: number },
-) {
+): Pick<ImageResponseOptions, "width" | "height" | "emoji" | "fonts"> {
   return {
     ...size,
     emoji: "twemoji" as const,
