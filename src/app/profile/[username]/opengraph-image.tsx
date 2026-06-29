@@ -6,6 +6,8 @@ import {
 } from "@/lib/metadata/og-fonts";
 import {
   fetchOgAvatarDataUrl,
+  splitOgBioLineSegments,
+  splitOgBioLines,
   truncateOgText,
 } from "@/lib/metadata/og-image-utils";
 import { siteName } from "@/lib/metadata/site";
@@ -55,10 +57,7 @@ export default async function Image({ params }: Props) {
   const avatarDataUrl = await fetchOgAvatarDataUrl(profile.avatar_url);
   const displayName = truncateOgText(profile.display_name, 28);
   const usernameLabel = truncateOgText(profile.username, 32);
-  const bioPreview = truncateOgText(
-    profile.bio ?? "公開晩酌記録",
-    80,
-  );
+  const bioPreview = splitOgBioLines(profile.bio ?? "公開晩酌記録");
 
   return new ImageResponse(
     (
@@ -68,14 +67,20 @@ export default async function Image({ params }: Props) {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          justifyContent: "space-between",
           padding: 64,
           background: "linear-gradient(135deg, #fafafa 0%, #e4e4e7 100%)",
           color: "#18181b",
           fontFamily: OG_FONT_FAMILY,
         }}
       >
-        <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 32,
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+        >
           {avatarDataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -120,19 +125,43 @@ export default async function Image({ params }: Props) {
 
         <div
           style={{
+            flex: 1,
+            width: "100%",
             display: "flex",
-            fontSize: 28,
-            lineHeight: 1.5,
-            color: "#3f3f46",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 4,
           }}
         >
-          {bioPreview}
+          {bioPreview.map((line, index) => (
+            <div
+              key={index}
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                columnGap: 8,
+                rowGap: 4,
+                width: "100%",
+                fontSize: 28,
+                lineHeight: 1.5,
+                color: "#3f3f46",
+              }}
+            >
+              {splitOgBioLineSegments(line).map((segment, segmentIndex) => (
+                <span key={segmentIndex} style={{ display: "flex" }}>
+                  {segment}
+                </span>
+              ))}
+            </div>
+          ))}
         </div>
 
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
+            flexShrink: 0,
             fontSize: 24,
             color: "#52525b",
           }}

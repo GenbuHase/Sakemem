@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { OG_ELLIPSIS, sanitizeOgText, truncateOgText } from "./og-image-utils";
+import {
+  OG_BIO_MAX_LENGTH,
+  OG_ELLIPSIS,
+  sanitizeOgText,
+  splitOgBioLineSegments,
+  splitOgBioLines,
+  truncateOgText,
+} from "./og-image-utils";
 
 describe("sanitizeOgText", () => {
   it("keeps Japanese and Latin text", () => {
@@ -19,20 +26,56 @@ describe("sanitizeOgText", () => {
 
 describe("truncateOgText", () => {
   it("returns sanitized text when within the limit", () => {
-    expect(truncateOgText("短い自己紹介", 80)).toBe("短い自己紹介");
+    expect(truncateOgText("短い自己紹介", OG_BIO_MAX_LENGTH)).toBe(
+      "短い自己紹介",
+    );
   });
 
   it("appends ellipsis when text exceeds the limit", () => {
-    const longBio = "あ".repeat(100);
-    expect(truncateOgText(longBio, 80)).toBe(
-      `${"あ".repeat(78)}${OG_ELLIPSIS}`,
+    const longBio = "あ".repeat(OG_BIO_MAX_LENGTH + 20);
+    expect(truncateOgText(longBio, OG_BIO_MAX_LENGTH)).toBe(
+      `${"あ".repeat(OG_BIO_MAX_LENGTH - OG_ELLIPSIS.length)}${OG_ELLIPSIS}`,
     );
   });
 
   it("truncates emoji like other characters", () => {
-    const text = `${"あ".repeat(79)}🍶`;
-    expect(truncateOgText(text, 80)).toBe(
-      `${"あ".repeat(78)}${OG_ELLIPSIS}`,
+    const text = `${"あ".repeat(OG_BIO_MAX_LENGTH - 1)}🍶`;
+    expect(truncateOgText(text, OG_BIO_MAX_LENGTH)).toBe(
+      `${"あ".repeat(OG_BIO_MAX_LENGTH - OG_ELLIPSIS.length)}${OG_ELLIPSIS}`,
+    );
+  });
+});
+
+describe("splitOgBioLines", () => {
+  it("preserves explicit line breaks", () => {
+    const bio = [
+      "TSU20C(心理) → Saitama Univ. '21PS(教育特支) → Web Engineer '25",
+      "┆小学1種・中高1種(英語)・特支1種・幼稚園2種取得済┆",
+      "Sci-mates 2023 準グランプリ",
+    ].join("\n");
+
+    expect(splitOgBioLines(bio)).toEqual([
+      "TSU20C(心理) → Saitama Univ. '21PS(教育特支) → Web Engineer '25",
+      "┆小学1種・中高1種(英語)・特支1種・幼稚園2種取得済┆",
+      "Sci-mates 2023 準グランプリ",
+    ]);
+  });
+
+  it("appends ellipsis when lines exceed the layout limit", () => {
+    const bio = Array.from({ length: 6 }, (_, index) => `行${index + 1}`).join(
+      "\n",
+    );
+
+    const lines = splitOgBioLines(bio);
+    expect(lines).toHaveLength(5);
+    expect(lines[4]).toMatch(/……$/);
+  });
+});
+
+describe("splitOgBioLineSegments", () => {
+  it("isolates line-prefix symbols from following latin words", () => {
+    expect(splitOgBioLineSegments("┆Saidai Contest 2023 準グランプリ")).toEqual(
+      ["┆", "Saidai", "Contest", "2023", "準グランプリ"],
     );
   });
 });
