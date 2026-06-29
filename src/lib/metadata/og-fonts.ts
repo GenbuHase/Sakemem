@@ -1,40 +1,102 @@
 import { readFile } from "fs/promises";
 import path from "path";
 
-export async function loadOgFonts(): Promise<{
+export const OG_FONT_FAMILY = "NotoSansJP, NotoSansSymbols2, NotoSansMono";
+
+const OG_FONT_CDN = {
+  jpRegular: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-jp@latest/japanese-400-normal.woff",
+  jpBold: "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-jp@latest/japanese-700-normal.woff",
+  symbols2: "https://cdn.jsdelivr.net/gh/notofonts/noto-fonts@main/hinted/ttf/NotoSansSymbols2/NotoSansSymbols2-Regular.ttf",
+  mono: "https://cdn.jsdelivr.net/gh/notofonts/noto-fonts@main/hinted/ttf/NotoSansMono/NotoSansMono-Regular.ttf",
+} as const;
+
+export type OgFontData = {
   regular: ArrayBuffer;
   bold: ArrayBuffer;
-}> {
-  const fontsDir = path.join(process.cwd(), "public", "fonts");
+  symbols: ArrayBuffer;
+  mono: ArrayBuffer;
+};
 
-  try {
-    const [regular, bold] = await Promise.all([
-      readFile(path.join(fontsDir, "NotoSansJP-Regular.woff")),
-      readFile(path.join(fontsDir, "NotoSansJP-Bold.woff")),
-    ]);
-    return {
-      regular: regular.buffer.slice(
-        regular.byteOffset,
-        regular.byteOffset + regular.byteLength,
-      ),
-      bold: bold.buffer.slice(
-        bold.byteOffset,
-        bold.byteOffset + bold.byteLength,
-      ),
-    };
-  } catch {
-    const [regularRes, boldRes] = await Promise.all([
-      fetch(
-        "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-jp@latest/japanese-400-normal.woff",
-      ),
-      fetch(
-        "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-jp@latest/japanese-700-normal.woff",
-      ),
-    ]);
+function toArrayBuffer(data: Buffer): ArrayBuffer {
+  return data.buffer.slice(
+    data.byteOffset,
+    data.byteOffset + data.byteLength,
+  ) as ArrayBuffer;
+}
 
-    return {
-      regular: await regularRes.arrayBuffer(),
-      bold: await boldRes.arrayBuffer(),
-    };
+export function buildOgImageOptions(
+  fonts: OgFontData,
+  size: { width: number; height: number },
+) {
+  return {
+    ...size,
+    emoji: "twemoji" as const,
+    fonts: [
+      {
+        name: "NotoSansJP",
+        data: fonts.regular,
+        weight: 400,
+        style: "normal",
+      },
+      {
+        name: "NotoSansJP",
+        data: fonts.bold,
+        weight: 700,
+        style: "normal",
+      },
+      {
+        name: "NotoSansSymbols2",
+        data: fonts.symbols,
+        weight: 400,
+        style: "normal",
+      },
+      {
+        name: "NotoSansMono",
+        data: fonts.mono,
+        weight: 400,
+        style: "normal",
+      },
+    ],
+  };
+}
+
+async function loadFontFile(
+  fontsDir: string,
+  localFilenames: readonly string[],
+  cdnUrl: string,
+): Promise<ArrayBuffer> {
+  for (const filename of localFilenames) {
+    try {
+      const data = await readFile(path.join(fontsDir, filename));
+      return toArrayBuffer(data);
+    } catch {
+      // try next local filename
+    }
   }
+
+  const response = await fetch(cdnUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to load OG font: ${cdnUrl}`);
+  }
+  return response.arrayBuffer();
+}
+
+export async function loadOgFonts(): Promise<OgFontData> {
+  const fontsDir = path.join(process.cwd(), "public", "fonts");
+  const [regular, bold, symbols, mono] = await Promise.all([
+    loadFontFile(fontsDir, ["NotoSansJP-Regular.woff"], OG_FONT_CDN.jpRegular),
+    loadFontFile(fontsDir, ["NotoSansJP-Bold.woff"], OG_FONT_CDN.jpBold),
+    loadFontFile(
+      fontsDir,
+      ["NotoSansSymbols2-Regular.ttf", "NotoSansSymbols2-Regular.woff"],
+      OG_FONT_CDN.symbols2,
+    ),
+    loadFontFile(
+      fontsDir,
+      ["NotoSansMono-Regular.ttf", "NotoSansMono-Regular.woff"],
+      OG_FONT_CDN.mono,
+    ),
+  ]);
+
+  return { regular, bold, symbols, mono };
 }

@@ -1,6 +1,6 @@
 {
   "name": "@genbuhase/sakemem",
-  "version": "alpha-0.3.14.4",
+  "version": "alpha-0.3.14.5",
   "private": true,
   "scripts": {
     "dev": "next dev",

@@ -1,5 +1,9 @@
 import { ImageResponse } from "next/og";
-import { loadOgFonts } from "@/lib/metadata/og-fonts";
+import {
+  buildOgImageOptions,
+  loadOgFonts,
+  OG_FONT_FAMILY,
+} from "@/lib/metadata/og-fonts";
 import {
   fetchOgAvatarDataUrl,
   truncateOgText,
@@ -68,7 +72,7 @@ export default async function Image({ params }: Props) {
           padding: 64,
           background: "linear-gradient(135deg, #fafafa 0%, #e4e4e7 100%)",
           color: "#18181b",
-          fontFamily: "NotoSansJP",
+          fontFamily: OG_FONT_FAMILY,
         }}
       >
         <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
@@ -138,22 +142,6 @@ export default async function Image({ params }: Props) {
         </div>
       </div>
     ),
-    {
-      ...size,
-      fonts: [
-        {
-          name: "NotoSansJP",
-          data: fonts.regular,
-          weight: 400,
-          style: "normal",
-        },
-        {
-          name: "NotoSansJP",
-          data: fonts.bold,
-          weight: 700,
-          style: "normal",
-        },
-      ],
-    },
+    buildOgImageOptions(fonts, size),
   );
 }

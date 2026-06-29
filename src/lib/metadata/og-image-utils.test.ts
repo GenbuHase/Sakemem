@@ -8,12 +8,12 @@ describe("sanitizeOgText", () => {
     );
   });
 
-  it("removes box-drawing and arrow symbols that break OG font loading", () => {
-    expect(sanitizeOgText("⇢┊装飾テキスト")).toBe("装飾テキスト");
+  it("keeps box-drawing and arrow symbols", () => {
+    expect(sanitizeOgText("⇢┊装飾テキスト")).toBe("⇢┊装飾テキスト");
   });
 
-  it("removes supplementary-plane characters such as emoji", () => {
-    expect(sanitizeOgText("乾杯🍶")).toBe("乾杯");
+  it("keeps supplementary-plane characters such as emoji", () => {
+    expect(sanitizeOgText("乾杯🍶")).toBe("乾杯🍶");
   });
 });
 
@@ -29,8 +29,10 @@ describe("truncateOgText", () => {
     );
   });
 
-  it("sanitizes before truncating", () => {
+  it("truncates emoji like other characters", () => {
     const text = `${"あ".repeat(79)}🍶`;
-    expect(truncateOgText(text, 80)).toBe(`${"あ".repeat(79)}`);
+    expect(truncateOgText(text, 80)).toBe(
+      `${"あ".repeat(78)}${OG_ELLIPSIS}`,
+    );
   });
 });

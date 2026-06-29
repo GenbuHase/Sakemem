@@ -1,27 +1,10 @@
 const OG_AVATAR_SIZE = 120;
 
-/** Symbols outside Noto Sans JP that make Satori fetch fallback fonts (often 400). */
-const OG_UNSUPPORTED_SYMBOL_RANGES: ReadonlyArray<[number, number]> = [
-  [0x2190, 0x21ff],
-  [0x2500, 0x257f],
-];
-
 export const OG_ELLIPSIS = "……";
 
 export function sanitizeOgText(text: string): string {
   return [...text]
-    .filter((char) => {
-      const codePoint = char.codePointAt(0);
-      if (codePoint === undefined) {
-        return false;
-      }
-      if (codePoint > 0xffff) {
-        return false;
-      }
-      return !OG_UNSUPPORTED_SYMBOL_RANGES.some(
-        ([start, end]) => codePoint >= start && codePoint <= end,
-      );
-    })
+    .filter((char) => char.codePointAt(0) !== undefined)
     .join("");
 }
 

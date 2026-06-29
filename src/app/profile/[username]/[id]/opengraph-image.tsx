@@ -1,7 +1,11 @@
 import { ImageResponse } from "next/og";
 import { getCategoryLabel } from "@/lib/constants/categories";
 import { isFoodCategory } from "@/lib/constants/categories";
-import { loadOgFonts } from "@/lib/metadata/og-fonts";
+import {
+  buildOgImageOptions,
+  loadOgFonts,
+  OG_FONT_FAMILY,
+} from "@/lib/metadata/og-fonts";
 import { truncateOgText } from "@/lib/metadata/og-image-utils";
 import { siteName } from "@/lib/metadata/site";
 import { createClient } from "@/lib/supabase/server";
@@ -84,7 +88,7 @@ export default async function Image({ params }: Props) {
           padding: 64,
           background: "linear-gradient(135deg, #18181b 0%, #3f3f46 100%)",
           color: "white",
-          fontFamily: "NotoSansJP",
+          fontFamily: OG_FONT_FAMILY,
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -140,22 +144,6 @@ export default async function Image({ params }: Props) {
         </div>
       </div>
     ),
-    {
-      ...size,
-      fonts: [
-        {
-          name: "NotoSansJP",
-          data: fonts.regular,
-          weight: 400,
-          style: "normal",
-        },
-        {
-          name: "NotoSansJP",
-          data: fonts.bold,
-          weight: 700,
-          style: "normal",
-        },
-      ],
-    },
+    buildOgImageOptions(fonts, size),
   );
 }
