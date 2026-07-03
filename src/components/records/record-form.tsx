@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Select, TextInput } from "@/components/ui/inputs";
 import { SectionCard } from "@/components/ui/section-card";
+import { VisibilitySelector } from "@/components/sharing/visibility-selector";
 import {
   CATEGORY_LABELS,
   isFoodCategory,
@@ -95,6 +96,10 @@ export function RecordForm() {
             />
           ) : null}
         </div>
+      </SectionCard>
+
+      <SectionCard title="公開設定">
+        <VisibilitySelector />
       </SectionCard>
 
       {state?.error ? (
