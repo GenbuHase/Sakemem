@@ -167,6 +167,12 @@ export function HeaderNav({
               プロフィール設定
             </MobileNavLink>
           ) : null}
+          <MobileNavLink
+            href="/changelog"
+            onNavigate={() => setMenuOpen(false)}
+          >
+            更新情報
+          </MobileNavLink>
           <LinkButton
             href="/records/new"
             size="sm"

@@ -119,6 +119,14 @@ export function HeaderUserMenu({
               >
                 プロフィール設定
               </Link>
+              <Link
+                href="/changelog"
+                role="menuitem"
+                className={MENU_ITEM_CLASS}
+                onClick={() => setMenuOpen(false)}
+              >
+                更新情報
+              </Link>
             </div>
             <div className="border-t border-zinc-100 pt-1">
               <form action={signOutAction}>
