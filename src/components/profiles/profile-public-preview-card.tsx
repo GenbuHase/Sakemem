@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { LinkButton } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/section-card";
 import { buildProfileUrl } from "@/lib/sharing/build-share-url";
-import { copyToClipboard } from "@/lib/utils/copy-to-clipboard";
+import { useCopyFeedback } from "@/lib/utils/use-copy-feedback";
 
 type ProfilePublicPreviewCardProps = {
   liveUsername: string;
@@ -17,7 +16,7 @@ export function ProfilePublicPreviewCard({
   draftUsername,
   showSavedNotice = false,
 }: ProfilePublicPreviewCardProps) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyFeedback();
   const liveUrl = buildProfileUrl(liveUsername);
   const trimmedDraft = draftUsername?.trim() ?? "";
   const hasPendingUsername =
@@ -25,13 +24,6 @@ export function ProfilePublicPreviewCard({
   const pendingUrl = hasPendingUsername
     ? buildProfileUrl(trimmedDraft)
     : null;
-
-  async function copyUrl() {
-    const ok = await copyToClipboard(liveUrl);
-    if (!ok) return;
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   return (
     <SectionCard
@@ -58,7 +50,7 @@ export function ProfilePublicPreviewCard({
             </p>
             <button
               type="button"
-              onClick={() => void copyUrl()}
+              onClick={() => void copy(liveUrl)}
               className="shrink-0 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
             >
               {copied ? "コピーしました" : "URL をコピー"}

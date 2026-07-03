@@ -11,6 +11,7 @@ import { FormMessage } from "@/components/ui/form-message";
 import { SectionCard } from "@/components/ui/section-card";
 import { cx } from "@/components/ui/styles";
 import { getCategoryLabel, isFoodCategory } from "@/lib/constants/categories";
+import { splitDrinksAndFoods } from "@/lib/records/split-pair";
 import type { SakememRecord } from "@/lib/types/record";
 import { formatRecordDate } from "@/lib/utils/date";
 import { RatingDisplay } from "./rating-display";
@@ -218,9 +219,9 @@ export function RecordPairingSection({
   const lastSuccess =
     (unlinkState && !unlinkState.error) || (linkState && !linkState.error);
 
-  const drinks = [record, ...partners].filter((r) => !isFoodCategory(r.category));
-  const foods = [record, ...partners].filter((r) => isFoodCategory(r.category));
-  const isPaired = partners.length > 0;
+  const allRecords = [record, ...partners];
+  const { drinks, foods } = splitDrinksAndFoods(allRecords);
+  const paired = partners.length > 0;
 
   return (
     <SectionCard
@@ -229,7 +230,7 @@ export function RecordPairingSection({
       description="お酒とおつまみを後からペアにしたり、複数の記録をまとめてペアにできます。"
     >
       <div className="space-y-5">
-        {isPaired ? (
+        {paired ? (
           <CurrentPairGroup
             drinks={drinks}
             foods={foods}
@@ -246,7 +247,7 @@ export function RecordPairingSection({
         ) : null}
 
         <LinkForm
-          partnersExist={isPaired}
+          partnersExist={paired}
           candidates={linkCandidates}
           recordId={record.id}
           formAction={linkAction}

@@ -4,7 +4,8 @@ import {
 } from "@/lib/records/group-timeline";
 import type { SakememRecord } from "@/lib/types/record";
 import { formatRecordDate } from "@/lib/utils/date";
-import { LinkButton } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PairRecordCard } from "./pair-record-card";
 import { RecordDetail } from "./record-detail";
 
 type TimelineProps = {
@@ -29,23 +30,9 @@ export function Timeline({
 }: TimelineProps) {
   if (entries.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
-        <p className="text-sm font-medium text-zinc-700">
-          {filtered
-            ? "条件に一致する記録がありません"
-            : "まだ記録がありません"}
-        </p>
-        <p className="mt-1.5 text-sm text-zinc-500">
-          {filtered
-            ? "検索条件を変えてお試しください。"
-            : "最初の晩酌を記録してみましょう。"}
-        </p>
-        {!filtered ? (
-          <div className="mt-6">
-            <LinkButton href="/records/new">記録する</LinkButton>
-          </div>
-        ) : null}
-      </div>
+      <EmptyState
+        variant={filtered ? "timeline-filtered" : "timeline-empty"}
+      />
     );
   }
 
@@ -77,41 +64,13 @@ export function Timeline({
                     pairRecords={getPairRecordsForEntry(entry)}
                   />
                 ) : (
-                  <div className="overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50/80">
-                    <div className="flex items-center gap-2 border-b border-zinc-200 bg-white px-4 py-2">
-                      <span className="inline-flex items-center rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
-                        ペア
-                      </span>
-                      <span className="text-xs text-zinc-500">
-                        お酒 {entry.drinks.length} · おつまみ{" "}
-                        {entry.foods.length}
-                      </span>
-                    </div>
-                    <div className="grid gap-3 p-3 sm:grid-cols-2">
-                      {entry.drinks.map((record) => (
-                        <RecordDetail
-                          key={record.id}
-                          record={record}
-                          nested
-                          className="h-full"
-                          showActions={showActions}
-                          shareUsername={shareUsername}
-                          pairRecords={getPairRecordsForEntry(entry)}
-                        />
-                      ))}
-                      {entry.foods.map((record) => (
-                        <RecordDetail
-                          key={record.id}
-                          record={record}
-                          nested
-                          className="h-full"
-                          showActions={showActions}
-                          shareUsername={shareUsername}
-                          pairRecords={getPairRecordsForEntry(entry)}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  <PairRecordCard
+                    drinks={entry.drinks}
+                    foods={entry.foods}
+                    showActions={showActions}
+                    shareUsername={shareUsername}
+                    pairRecords={getPairRecordsForEntry(entry)}
+                  />
                 )}
               </article>
             ))}

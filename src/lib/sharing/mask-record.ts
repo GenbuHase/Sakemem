@@ -1,3 +1,4 @@
+/** RPC 戻り値の表示用変換。get_shared_* は SQL 側でも place をマスクするが、二重適用しても害はない。 */
 import type { SakememRecord, RecordVisibility } from "@/lib/types/record";
 
 export type SharedRecord = {

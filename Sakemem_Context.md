@@ -169,23 +169,37 @@ src/
 │   └── records/          # タイムライン・新規・編集
 ├── components/
 │   ├── auth/             # 認証フォーム
-│   ├── layout/           # PublicHeader（公開ページ用）
+│   ├── layout/           # PublicHeader, SiteLogo, header-context
 │   ├── profiles/         # profile-settings-form, profile-avatar-upload, profile-public-preview-card, username-field
-│   ├── records/          # 記録 UI（フォーム、タイムライン、フィルタ、分析）
-│   ├── sharing/          # 共有ボタン・公開範囲セレクタ
-│   └── ui/               # 共通 UI プリミティブ
+│   ├── records/          # 記録 UI（フォーム、タイムライン、PairRecordCard、フィルタ、分析）
+│   ├── sharing/          # 共有ボタン・公開範囲セレクタ（UI のみ）
+│   └── ui/               # 共通 UI プリミティブ（EmptyState 等）
 ├── lib/
 │   ├── auth/             # requireUser 等
 │   ├── constants/        # カテゴリ・種類・評価軸定義
+│   ├── layout/           # getHeaderContext（ヘッダー用セッション・プロフィール取得）
 │   ├── metadata/         # OGP メタデータ・フォント読み込み
-│   ├── profiles/         # repository, validate-username, upload-avatar, delete-avatar-storage
-│   ├── records/          # ドメインロジック（フィルタ、分析、ペアリング、リポジトリ）
-│   ├── sharing/          # 共有 URL・RPC ラッパー・place マスク
+│   ├── profiles/         # 本人プロフィール repository（公開閲覧は sharing へ）
+│   ├── records/          # ドメインロジック（フィルタ、分析、ペアリング、split-pair、リポジトリ）
+│   ├── routing/          # 公開パス解析・revalidatePath 一元化
+│   ├── sharing/          # 公開 RPC ラッパー・共有 URL・place マスク
 │   ├── sakenowa/         # さけのわ API クライアント
-│   ├── supabase/         # Supabase クライアント・セッション
+│   ├── supabase/         # Supabase サーバー・セッション（middleware）
 │   └── types/            # 型定義
 └── proxy.ts              # セッション更新・保護ルート・/@username rewrite
 ```
+
+### モジュール責務（公開データまわり）
+
+| モジュール | 責務 |
+| :--- | :--- |
+| `lib/profiles/repository.ts` | 認証ユーザー本人のプロフィール CRUD（RLS） |
+| `lib/sharing/fetch-shared.ts` | 公開 RPC の**唯一の**ラッパー |
+| `lib/sharing/mask-record.ts` | RPC 戻り値の表示用変換・place マスク |
+| `lib/routing/public-profile-path.ts` | `/@username` パス解析・rewrite 判定 |
+| `lib/routing/revalidate-public.ts` | 公開ページの `revalidatePath` 一元化 |
+| `components/sharing/*` | 共有 UI のみ（DB アクセスなし） |
+| `app/profile/*` | 薄い Server Page（fetch → コンポーネント委譲） |
 
 ## 6. 開発ロードマップ
 
@@ -203,7 +217,7 @@ src/
 | Step 10 | パフォーマンス改善（タイムラインのクライアントサイド移行、即時ローディング遷移の導入） | ✅ 完了 |
 | Step 11 | 共有機能 Phase A（プロフィール、公開範囲、公開ページ、動的 OGP、共有 UI） | ✅ 完了 |
 
-**現状:** MVP・パフォーマンス改善に加え、共有機能 Phase A まで実装済み（`alpha-0.3.14.2`）。2026-06-29 時点でプロフィール画像のアップロード即時 DB 反映・Storage クリーンアップ・username 変更 UX も反映済み。Phase B（フォロー・フィード等）は未着手。各環境への `005_sharing_and_profiles.sql` 適用と本番 OG 検証はデプロイ時に実施。
+**現状:** MVP・パフォーマンス改善に加え、共有機能 Phase A まで実装済み（`alpha-0.3.18`）。2026-06-29 時点でプロフィール画像のアップロード即時 DB 反映・Storage クリーンアップ・username 変更 UX も反映済み。2026-07-04 にモジュール境界整理・UI 共通化（PairRecordCard、revalidate 一元化等）を実施。Phase B（フォロー・フィード等）は未着手。各環境への `005_sharing_and_profiles.sql` 適用と本番 OG 検証はデプロイ時に実施。
 
 ### 関連ファイル
 
@@ -212,4 +226,4 @@ src/
 - **環境変数テンプレート:** `.env.example`
 - **セットアップ・デプロイ手順:** `README.md`（ローカル確認は implementation-plan §15）
 - **CI:** `.github/workflows/ci.yml`
-- **テスト:** `src/lib/records/*.test.ts`、`src/lib/profiles/*.test.ts`（`upload-avatar`、`delete-avatar-storage`、`validate-username` 含む）、`src/lib/sharing/build-share-url.test.ts`、`src/lib/constants/drink-styles.test.ts`
+- **テスト:** `src/lib/records/*.test.ts`、`src/lib/profiles/*.test.ts`（`upload-avatar`、`delete-avatar-storage`、`validate-username` 含む）、`src/lib/sharing/build-share-url.test.ts`、`src/lib/routing/*.test.ts`、`src/lib/constants/drink-styles.test.ts`

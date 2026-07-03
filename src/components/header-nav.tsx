@@ -5,13 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useState, type Dispatch, type SetStateAction } from "react";
 import { HeaderUserMenu } from "@/components/header-user-menu";
 import { Button, LinkButton } from "@/components/ui/button";
-import { cx } from "@/components/ui/styles";
-
-const NAV_LINK_CLASS =
-  "rounded-md px-2.5 py-1.5 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300";
-
-const MOBILE_NAV_LINK_CLASS =
-  "block rounded-lg px-3 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300";
+import { cx, MOBILE_NAV_LINK_CLASS, NAV_LINK_CLASS } from "@/components/ui/styles";
 
 type HeaderUserProfile = {
   displayName: string;

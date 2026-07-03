@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { buildRecordShareUrl } from "@/lib/sharing/build-share-url";
 import {
@@ -8,7 +7,7 @@ import {
   getPairFoodNames,
 } from "@/lib/sharing/build-share-text";
 import type { SakememRecord } from "@/lib/types/record";
-import { copyToClipboard } from "@/lib/utils/copy-to-clipboard";
+import { useCopyFeedback } from "@/lib/utils/use-copy-feedback";
 
 type ShareButtonProps = {
   record: SakememRecord;
@@ -21,20 +20,13 @@ export function ShareButton({
   username,
   pairRecords = [],
 }: ShareButtonProps) {
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useCopyFeedback();
   const shareUrl = buildRecordShareUrl(username, record.id);
   const shareText = buildShareText({
     record,
     username,
     pairFoodNames: getPairFoodNames(pairRecords),
   });
-
-  async function copyUrl() {
-    const ok = await copyToClipboard(shareText);
-    if (!ok) return;
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
 
   function shareOnX() {
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
@@ -55,7 +47,12 @@ export function ShareButton({
       <Button type="button" variant="secondary" size="sm" onClick={shareOnX}>
         Twitterに投稿
       </Button>
-      <Button type="button" variant="secondary" size="sm" onClick={() => void copyUrl()}>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={() => void copy(shareText)}
+      >
         {copied ? "コピーしました" : "共有文をコピー"}
       </Button>
       {typeof navigator !== "undefined" && "share" in navigator ? (

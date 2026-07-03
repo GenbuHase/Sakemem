@@ -1,8 +1,8 @@
+/** 認証ユーザー本人のプロフィール CRUD（RLS 経由）。公開閲覧は lib/sharing/fetch-shared.ts を使う。 */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   CreateProfileInput,
   Profile,
-  PublicProfile,
   UpdateProfileInput,
 } from "./types";
 
@@ -92,20 +92,4 @@ export async function isUsernameAvailable(
   }
 
   return Boolean(data);
-}
-
-export async function fetchPublicProfile(
-  supabase: SupabaseClient,
-  username: string,
-): Promise<PublicProfile | null> {
-  const { data, error } = await supabase.rpc("get_public_profile", {
-    p_username: username,
-  });
-
-  if (error) {
-    throw new Error("公開プロフィールの取得に失敗しました。");
-  }
-
-  const row = (data as PublicProfile[] | null)?.[0];
-  return row ?? null;
 }

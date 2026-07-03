@@ -1,6 +1,15 @@
 export const FIELD_LABEL_CLASS =
   "mb-1.5 block text-sm font-medium text-zinc-700";
 
+export const NAV_LINK_CLASS =
+  "rounded-md px-2.5 py-1.5 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300";
+
+export const PUBLIC_NAV_LINK_CLASS =
+  "rounded-md px-2.5 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900";
+
+export const MOBILE_NAV_LINK_CLASS =
+  "block rounded-lg px-3 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300";
+
 export const FIELD_CONTROL_CLASS =
   "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500";
 

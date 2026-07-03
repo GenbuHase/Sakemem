@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ProfileAvatar } from "@/components/profiles/profile-avatar";
 import { Timeline } from "@/components/records/timeline";
+import { EmptyState } from "@/components/ui/empty-state";
 import { buildPageMetadata } from "@/lib/metadata/build-metadata";
 import { buildPublicProfileMetadataInput } from "@/lib/metadata/public-profile";
 import { createClient } from "@/lib/supabase/server";
@@ -68,11 +69,7 @@ export default async function PublicProfilePage({
       </div>
 
       {entries.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center">
-          <p className="text-sm text-zinc-600">
-            まだ公開されている記録はありません
-          </p>
-        </div>
+        <EmptyState variant="public-profile-empty" />
       ) : (
         <Timeline entries={entries} showActions={false} />
       )}

@@ -5,6 +5,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/require-user";
 import { fetchProfileByUserId } from "@/lib/profiles/repository";
+import {
+  revalidatePublicProfile,
+  revalidatePublicRecord,
+} from "@/lib/routing/revalidate-public";
 import { isFoodCategory } from "@/lib/constants/categories";
 import {
   parseRecordCategory,
@@ -50,10 +54,23 @@ async function revalidateSharedRecord(
   const profile = await fetchProfileByUserId(supabase, userId);
   if (!profile) return;
 
-  revalidatePath(`/@${profile.username}`);
-  revalidatePath(`/@${profile.username}/${recordId}`);
-  revalidatePath(`/profile/${profile.username}`);
-  revalidatePath(`/profile/${profile.username}/${recordId}`);
+  revalidatePublicRecord(profile.username, recordId);
+}
+
+async function revalidatePublicProfileIfNeeded(
+  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createClient>>,
+  userId: string,
+  inserts: RecordInsert[],
+): Promise<void> {
+  const hasPublicRecord = inserts.some(
+    (insert) => insert.visibility === "public",
+  );
+  if (!hasPublicRecord) return;
+
+  const profile = await fetchProfileByUserId(supabase, userId);
+  if (!profile) return;
+
+  revalidatePublicProfile(profile.username);
 }
 
 function revalidateRecord(
@@ -165,6 +182,7 @@ export async function createRecords(
 
   try {
     await insertRecords(supabase, inserts);
+    await revalidatePublicProfileIfNeeded(supabase, user.id, inserts);
   } catch (error) {
     return toErrorState(error, "記録の保存に失敗しました。");
   }

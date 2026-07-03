@@ -1,3 +1,4 @@
+/** 公開データ取得の唯一の RPC ラッパー（SECURITY DEFINER 経由）。 */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SakememRecord } from "@/lib/types/record";
 import type { PublicProfile } from "@/lib/profiles/types";

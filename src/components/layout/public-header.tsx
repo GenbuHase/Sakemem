@@ -1,20 +1,8 @@
 import { PublicHeaderNav } from "@/components/layout/public-header-nav";
-import { fetchProfileByUserId } from "@/lib/profiles/repository";
-import { createClient } from "@/lib/supabase/server";
+import { getHeaderContext } from "@/lib/layout/header-context";
 
 export async function PublicHeader() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { isLoggedIn, myUsername } = await getHeaderContext();
 
-  let myUsername: string | null = null;
-  if (user) {
-    const myProfile = await fetchProfileByUserId(supabase, user.id);
-    myUsername = myProfile?.username ?? null;
-  }
-
-  return (
-    <PublicHeaderNav isLoggedIn={!!user} myUsername={myUsername} />
-  );
+  return <PublicHeaderNav isLoggedIn={isLoggedIn} myUsername={myUsername} />;
 }

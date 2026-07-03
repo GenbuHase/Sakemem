@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SiteLogo } from "@/components/layout/site-logo";
 import { LinkButton } from "@/components/ui/button";
+import { PUBLIC_NAV_LINK_CLASS } from "@/components/ui/styles";
 import {
   isPublicProfilePage,
   parseProfileUsername,
 } from "@/lib/routing/public-profile-path";
-
-const NAV_LINK_CLASS =
-  "rounded-md px-2.5 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900";
 
 type PublicHeaderNavProps = {
   isLoggedIn: boolean;
@@ -33,12 +32,7 @@ export function PublicHeaderNav({
   return (
     <header className="border-b border-zinc-200 bg-white">
       <div className="mx-auto flex h-14 max-w-3xl items-center justify-between gap-4 px-4 sm:px-6">
-        <Link
-          href="/"
-          className="text-sm font-semibold tracking-widest text-zinc-900 uppercase"
-        >
-          Sakemem
-        </Link>
+        <SiteLogo />
         <nav
           aria-label="公開ページナビゲーション"
           className="flex items-center gap-1.5 sm:gap-2"
@@ -46,11 +40,11 @@ export function PublicHeaderNav({
           {isLoggedIn ? (
             <>
               {showEditProfile ? (
-                <Link href="/settings/profile" className={NAV_LINK_CLASS}>
+                <Link href="/settings/profile" className={PUBLIC_NAV_LINK_CLASS}>
                   プロフィールを編集
                 </Link>
               ) : null}
-              <Link href="/records" className={NAV_LINK_CLASS}>
+              <Link href="/records" className={PUBLIC_NAV_LINK_CLASS}>
                 タイムライン
               </Link>
             </>

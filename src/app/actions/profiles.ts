@@ -1,9 +1,9 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/require-user";
+import { revalidatePublicProfile } from "@/lib/routing/revalidate-public";
 import {
   fetchProfileByUserId,
   insertProfile,
@@ -25,15 +25,6 @@ export type ProfileActionState = {
   profileUrl?: string;
   username?: string;
 };
-
-function revalidatePublicProfile(username: string, oldUsername?: string): void {
-  revalidatePath(`/@${username}`);
-  revalidatePath(`/profile/${username}`);
-  if (oldUsername && oldUsername !== username) {
-    revalidatePath(`/@${oldUsername}`);
-    revalidatePath(`/profile/${oldUsername}`);
-  }
-}
 
 function parseDisplayName(value: FormDataEntryValue | null): string {
   const trimmed = String(value ?? "").trim();
