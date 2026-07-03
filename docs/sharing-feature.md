@@ -81,7 +81,7 @@ Sakemem を「SNS」にするのではなく、**信頼できる人の晩酌ノ�
 
 - 共有用 URL: `/@[username]/[id]`（記録）、`/@[username]`（公開プロフィール）
 - **動的 OGP**（Open Graph / Twitter Card）— 記録・プロフィールごとに `title` / `description` / OG 画像を生成
-- 共有ボタンから URL コピー、X intent、Web Share API（モバイル）
+- 共有ボタンから URL コピー、Twitter intent、Web Share API（モバイル）
 
 ### 4.2 共有ページで見せる内容
 
@@ -132,7 +132,7 @@ https://sakemem.example.com/@genbu/a1b2c3d4-e5f6-7890-abcd-ef1234567890
 #Sakemem
 ```
 
-実装では「URL コピー」「X で投稿」（`https://twitter.com/intent/tweet?text=...&url=...`）程度から始め、Web Share API はモバイル向けに追加。
+実装では「URL コピー」「Twitter で投稿」（`https://twitter.com/intent/tweet?text=...&url=...`）程度から始め、Web Share API はモバイル向けに追加。
 
 ### 4.4 ルーティング案
 
@@ -209,7 +209,7 @@ SQL 全文は [sharing-implementation-plan.md](./sharing-implementation-plan.md)
 | 場所 | 変更 |
 | :--- | :--- |
 | 記録編集画面 | 公開範囲セレクタ、`hide_place_when_shared` チェック |
-| 記録詳細 / タイムライン | 「共有」ボタン → URL コピー / X intent |
+| 記録詳細 / タイムライン | 「共有」ボタン → URL コピー / Twitter intent |
 | `/@[username]` | プロフィール画像・表示名・bio・公開記録一覧（ペアカード）。**本文は常に閲覧専用** |
 | `/@[username]/[id]` | 共有専用レイアウト（`RecordDetail` `showActions={false}`） |
 | 公開ページ共通ヘッダー | `PublicHeader` — 認証状態に応じて出し分け（§4.10） |

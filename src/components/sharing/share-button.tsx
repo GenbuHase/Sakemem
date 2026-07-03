@@ -52,11 +52,11 @@ export function ShareButton({
 
   return (
     <div className="flex flex-wrap gap-2">
+      <Button type="button" variant="secondary" size="sm" onClick={shareOnX}>
+        Twitterに投稿
+      </Button>
       <Button type="button" variant="secondary" size="sm" onClick={() => void copyUrl()}>
         {copied ? "コピーしました" : "共有文をコピー"}
-      </Button>
-      <Button type="button" variant="secondary" size="sm" onClick={shareOnX}>
-        X で投稿
       </Button>
       {typeof navigator !== "undefined" && "share" in navigator ? (
         <Button

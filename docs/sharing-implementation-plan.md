@@ -22,7 +22,7 @@
 | 場所マスク | `hide_place_when_shared` — 共有時に `place` を非表示 |
 | 公開プロフィール | `/@username` — `public` 記録のみ一覧（ペアカード） |
 | 記録共有ページ | `/@username/[id]` — `unlisted` / `public` の閲覧専用ページ |
-| 外部共有 UI | URL コピー、X intent、モバイル向け Web Share API |
+| 外部共有 UI | URL コピー、Twitter intent、モバイル向け Web Share API |
 | 動的 OGP | 記録・プロフィールごとに `title` / `description` / **動的 OG 画像** |
 | 既存ユーザー | 初回ログイン時に `username` 設定オンボーディング |
 | URL rewrite | `/@username` → 内部 `/profile/[username]` |
@@ -350,7 +350,7 @@ src/lib/
 │   └── types.ts
 ├── sharing/
 │   ├── build-share-url.ts
-│   ├── build-share-text.ts # X 投稿用テンプレート
+│   ├── build-share-text.ts # Twitter 投稿用テンプレート
 │   ├── fetch-shared.ts     # RPC ラッパー
 │   └── mask-record.ts      # place マスク済みビュー
 └── metadata/
@@ -565,7 +565,7 @@ export const metadata: Metadata = {
 アクション:
 
 1. **URL をコピー** — `navigator.clipboard` + トースト
-2. **X で投稿** — `https://twitter.com/intent/tweet?text=...&url=...`（`build-share-text.ts`）
+2. **Twitter で投稿** — `https://twitter.com/intent/tweet?text=...&url=...`（`build-share-text.ts`）
 3. **共有…**（`navigator.share` があれば）— モバイル
 
 配置: タイムラインの `RecordDetail` 内（`showActions` 横）または編集ページ上部。
@@ -802,7 +802,7 @@ export async function removeAvatar(
 | 単体 | `validate-username`, `build-share-url`, `mask-record`, `upload-avatar`, `delete-avatar-storage` |
 | 単体（未追加） | `build-share-text` — 初版では手動 QA でカバー |
 | 単体（既存パターン） | `groupRecordsForTimeline` — 公開記録のペア結合 |
-| 手動 | RPC + 各 visibility、OG 画像の日本語、X intent、プロフィール画像アップロード・差し替え・削除（Storage クリーンアップ）・username 変更（公開 URL プレビュー） |
+| 手動 | RPC + 各 visibility、OG 画像の日本語、Twitter intent、プロフィール画像アップロード・差し替え・削除（Storage クリーンアップ）・username 変更（公開 URL プレビュー） |
 | E2E | 初版では省略（Vitest のみ） |
 
 ---
