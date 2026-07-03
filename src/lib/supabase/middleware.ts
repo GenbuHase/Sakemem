@@ -1,28 +1,20 @@
+import { rewriteAtUsernameToProfilePath } from "@/lib/routing/public-profile-path";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 function rewriteAtUsername(request: NextRequest): NextResponse | null {
   const { pathname } = request.nextUrl;
+  const profilePath = rewriteAtUsernameToProfilePath(pathname);
 
-  const recordMatch = pathname.match(/^\/@([^/]+)\/([^/]+)$/);
-  if (recordMatch) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/profile/${recordMatch[1]}/${recordMatch[2]}`;
-    const response = NextResponse.rewrite(url);
-    response.headers.set("x-pathname", pathname);
-    return response;
+  if (!profilePath) {
+    return null;
   }
 
-  const profileMatch = pathname.match(/^\/@([^/]+)$/);
-  if (profileMatch) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/profile/${profileMatch[1]}`;
-    const response = NextResponse.rewrite(url);
-    response.headers.set("x-pathname", pathname);
-    return response;
-  }
-
-  return null;
+  const url = request.nextUrl.clone();
+  url.pathname = profilePath;
+  const response = NextResponse.rewrite(url);
+  response.headers.set("x-pathname", pathname);
+  return response;
 }
 
 export async function updateSession(request: NextRequest) {
