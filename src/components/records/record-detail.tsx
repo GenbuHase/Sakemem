@@ -2,13 +2,13 @@ import Link from "next/link";
 import { getCategoryLabel } from "@/lib/constants/categories";
 import {
   STYLE_AWARE_FLAVOR_LABELS,
-  getDrinkStyleLabel,
   hasDrinkStyles,
 } from "@/lib/constants/drink-styles";
 import { getFlavorMetricDefs } from "@/lib/constants/flavor-metrics";
 import type { SakememRecord } from "@/lib/types/record";
 import { cx } from "@/components/ui/styles";
 import { DeleteRecordButton } from "./delete-record-button";
+import { RecordMetadata } from "./record-metadata";
 import { RatingDisplay } from "./rating-display";
 import { ShareButton } from "@/components/sharing/share-button";
 
@@ -35,7 +35,6 @@ export function RecordDetail({
   author,
   className,
 }: RecordDetailProps) {
-  const styleLabel = getDrinkStyleLabel(record.category, record.style);
   const flavorDefs = buildFlavorMetricDefs(record);
   const filledMetrics = flavorDefs.filter(
     ({ key }) => record.flavor_metrics[key] !== undefined,
@@ -50,7 +49,7 @@ export function RecordDetail({
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           {author ? (
             <Link
               href={author.href ?? `/@${author.username}`}
@@ -62,29 +61,9 @@ export function RecordDetail({
           <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600">
             {getCategoryLabel(record.category)}
           </span>
-          <h3 className="mt-2 text-base font-semibold text-zinc-900">
+          <h3 className="mt-2 break-words text-base font-semibold text-zinc-900">
             {record.name}
           </h3>
-          {record.producer ? (
-            <p className="mt-0.5 truncate text-sm text-zinc-500">
-              {record.producer}
-            </p>
-          ) : null}
-          {styleLabel ? (
-            <p className="mt-0.5 truncate text-sm text-zinc-500">
-              {styleLabel}
-            </p>
-          ) : null}
-          {record.sub_info ? (
-            <p className="mt-0.5 truncate text-sm text-zinc-500">
-              {record.sub_info}
-            </p>
-          ) : null}
-          {record.place ? (
-            <p className="mt-0.5 truncate text-sm text-zinc-400">
-              {record.place}
-            </p>
-          ) : null}
         </div>
         {showActions ? (
           <div className="flex shrink-0 items-center gap-1">
@@ -98,6 +77,7 @@ export function RecordDetail({
           </div>
         ) : null}
       </div>
+      <RecordMetadata record={record} />
 
       {showActions &&
       shareUsername &&

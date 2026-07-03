@@ -62,7 +62,7 @@ export function Timeline({
             {formatRecordDate(group.date)}
           </time>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2">
             {group.entries.map((entry) => (
               <article
                 key={entry.kind === "single" ? entry.record.id : entry.pairId}
