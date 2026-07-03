@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { groupRecordsForTimeline } from "./group-timeline";
+import {
+  groupRecordsForTimeline,
+  groupTimelineEntriesByDate,
+} from "./group-timeline";
 import type { SakememRecord } from "@/lib/types/record";
 
 function makeRecord(
@@ -79,6 +82,49 @@ describe("groupRecordsForTimeline", () => {
       foods: [
         expect.objectContaining({ id: "food-1" }),
         expect.objectContaining({ id: "food-2" }),
+      ],
+    });
+  });
+});
+
+describe("groupTimelineEntriesByDate", () => {
+  it("groups entries that share the same date", () => {
+    const entries = groupRecordsForTimeline([
+      makeRecord({
+        id: "drink-1",
+        category: "beer",
+        name: "エビス",
+        date: "2026-01-02",
+        created_at: "2026-01-02T12:00:00Z",
+      }),
+      makeRecord({
+        id: "drink-2",
+        category: "wine",
+        name: "ボジョレー",
+        date: "2026-01-01",
+        created_at: "2026-01-01T18:00:00Z",
+      }),
+      makeRecord({
+        id: "food-1",
+        category: "food",
+        name: "枝豆",
+        date: "2026-01-01",
+        created_at: "2026-01-01T12:00:00Z",
+      }),
+    ]);
+
+    const groups = groupTimelineEntriesByDate(entries);
+
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toMatchObject({
+      date: "2026-01-02",
+      entries: [expect.objectContaining({ kind: "single" })],
+    });
+    expect(groups[1]).toMatchObject({
+      date: "2026-01-01",
+      entries: [
+        expect.objectContaining({ kind: "single" }),
+        expect.objectContaining({ kind: "single" }),
       ],
     });
   });

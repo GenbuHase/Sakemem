@@ -23,6 +23,7 @@ type RecordDetailProps = {
     displayName: string;
     href?: string;
   };
+  className?: string;
 };
 
 export function RecordDetail({
@@ -32,6 +33,7 @@ export function RecordDetail({
   shareUsername = null,
   pairRecords = [],
   author,
+  className,
 }: RecordDetailProps) {
   const styleLabel = getDrinkStyleLabel(record.category, record.style);
   const flavorDefs = buildFlavorMetricDefs(record);
@@ -44,6 +46,7 @@ export function RecordDetail({
       className={cx(
         "rounded-xl border border-zinc-200 bg-white p-4",
         !nested && "shadow-sm",
+        className,
       )}
     >
       <div className="flex items-start justify-between gap-3">

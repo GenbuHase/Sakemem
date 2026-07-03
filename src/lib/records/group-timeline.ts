@@ -75,3 +75,37 @@ export function groupRecordsForTimeline(
       ),
   );
 }
+
+export type TimelineDateGroup = {
+  date: string;
+  entries: TimelineEntry[];
+};
+
+export function groupTimelineEntriesByDate(
+  entries: TimelineEntry[],
+): TimelineDateGroup[] {
+  const byDate = new Map<string, TimelineEntry[]>();
+
+  for (const entry of entries) {
+    const group = byDate.get(entry.date) ?? [];
+    group.push(entry);
+    byDate.set(entry.date, group);
+  }
+
+  const groups: TimelineDateGroup[] = [];
+  const seenDates = new Set<string>();
+
+  for (const entry of entries) {
+    if (seenDates.has(entry.date)) {
+      continue;
+    }
+
+    seenDates.add(entry.date);
+    groups.push({
+      date: entry.date,
+      entries: byDate.get(entry.date) ?? [],
+    });
+  }
+
+  return groups;
+}
