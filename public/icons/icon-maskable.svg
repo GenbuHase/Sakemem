@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" fill="#F4F4F5"/>
+
+  <g transform="translate(256 256) scale(0.8) translate(-256 -256)">
+    <g opacity="0.62">
+      <path
+        d="M104 222 C56 228 54 300 110 306"
+        fill="none"
+        stroke="#18181B"
+        stroke-width="14"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M102 198 A 46 11 0 0 1 194 198 L188 322 C168 344 128 344 108 322 L102 198 Z"
+        fill="#FAFAFA"
+      />
+      <path
+        d="M112 248 L115 322 C117 334 131 340 148 340 C165 340 179 334 181 322 L184 248 Z"
+        fill="#FBBF24"
+      />
+      <ellipse cx="148" cy="246" rx="30" ry="7" fill="#FAFAFA"/>
+      <path
+        d="M102 198 A 46 11 0 0 1 194 198 L188 322 C168 344 128 344 108 322 L102 198 Z"
+        fill="none"
+        stroke="#18181B"
+        stroke-width="14"
+        stroke-linejoin="round"
+      />
+    </g>
+
+    <g opacity="0.62">
+      <path
+        d="M352 186 L349 159 H 379 L376 186 C398 187 412 215 413 255 C414 295 398 328 364 329 C330 328 314 295 315 255 C316 215 330 187 352 186 Z"
+        fill="#FAFAFA"
+      />
+      <path
+        d="M336 248 A 28 8 0 0 1 392 248 C394 282 388 312 364 320 C340 312 334 282 336 248 Z"
+        fill="#D4D4D8"
+        opacity="0.85"
+      />
+      <path
+        d="M352 186 L349 159 H 379 L376 186 C398 187 412 215 413 255 C414 295 398 328 364 329 C330 328 314 295 315 255 C316 215 330 187 352 186 Z"
+        fill="none"
+        stroke="#18181B"
+        stroke-width="14"
+        stroke-linejoin="round"
+      />
+    </g>
+
+    <path
+      d="M176 298 A 80 19 0 0 1 336 298 L320 356 C318 376 290 388 256 388 C222 388 194 376 192 356 L176 298 Z"
+      fill="#FAFAFA"
+    />
+    <path
+      d="M200 324 A 56 14 0 0 1 312 324 L304 354 C302 370 280 378 256 378 C232 378 210 370 208 354 L200 324 Z"
+      fill="#D4D4D8"
+      opacity="0.9"
+    />
+    <path
+      d="M176 298 A 80 19 0 0 1 336 298 L320 356 C318 376 290 388 256 388 C222 388 194 376 192 356 L176 298 Z"
+      fill="none"
+      stroke="#18181B"
+      stroke-width="16"
+      stroke-linejoin="round"
+    />
+  </g>
+</svg>
