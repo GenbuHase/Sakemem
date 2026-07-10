@@ -116,7 +116,7 @@ export function RecordDetail({
         {record.comment ? (
           <div>
             <p className="text-xs font-medium text-zinc-500">メモ</p>
-            <p className="mt-1 text-sm leading-relaxed text-zinc-700">
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700">
               {record.comment}
             </p>
           </div>
