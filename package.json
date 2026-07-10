@@ -1,6 +1,6 @@
 {
   "name": "@genbuhase/sakemem",
-  "version": "alpha-0.4.2",
+  "version": "alpha-0.4.3",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,7 @@
     "icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
+    "@next/third-parties": "^16.2.7",
     "@serwist/window": "^9.5.11",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",

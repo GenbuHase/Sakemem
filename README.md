@@ -31,6 +31,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase プロジェクト URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon（公開）キー |
 | `NEXT_PUBLIC_SITE_URL` | アプリの公開 URL（認証リダイレクト・**共有リンク・OGP** に必須。ローカル: `http://localhost:3000`） |
+| `NEXT_PUBLIC_GA_ID` | Google Analytics 4 の測定 ID（任意。例: `G-XXXXXXXXXX`。未設定時は計測しない） |
 
 ### 3. データベース
 
@@ -73,7 +74,7 @@ npm run dev
 ## Vercel へのデプロイ
 
 1. GitHub リポジトリを Vercel にインポートします。
-2. **Environment Variables** に `.env.example` と同じ 3 変数を設定します。
+2. **Environment Variables** に `.env.example` と同じ変数を設定します（`NEXT_PUBLIC_GA_ID` は任意）。
    - `NEXT_PUBLIC_SITE_URL` は本番 URL（例: `https://sakemem.vercel.app`）にします。
 3. デプロイ後、Supabase の **Authentication → URL Configuration** で以下を設定します。
    - **Site URL:** 本番アプリ URL

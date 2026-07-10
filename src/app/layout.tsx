@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { Geist, Geist_Mono } from "next/font/google";
+import { GaNoticeBanner } from "@/components/analytics/ga-notice-banner";
 import { Header } from "@/components/header";
 import { HeaderGate } from "@/components/header-gate";
 import { SerwistProvider } from "@/components/serwist-provider";
@@ -40,6 +42,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+
   return (
     <html
       lang="ja"
@@ -51,8 +55,10 @@ export default function RootLayout({
             <Header />
           </HeaderGate>
           {children}
+          <GaNoticeBanner enabled={Boolean(gaId)} />
         </SerwistProvider>
       </body>
+      {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
     </html>
   );
 }
