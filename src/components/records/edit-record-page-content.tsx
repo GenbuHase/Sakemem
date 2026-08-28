@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRecords } from "@/components/providers/records-provider";
 import { EditRecordForm } from "@/components/records/edit-record-form";
 import { RecordPairingSection } from "@/components/records/record-pairing-section";
@@ -12,6 +12,13 @@ import {
   filterLinkCandidates,
   getPartners,
 } from "@/lib/records/pairing";
+import {
+  fetchRecordById,
+  fetchRecordsByPairId,
+  fetchUnpairedOppositeRecords,
+} from "@/lib/records/repository";
+import { createClient } from "@/lib/supabase/client";
+import type { SakememRecord } from "@/lib/types/record";
 
 type EditRecordPageContentProps = {
   recordId?: string;
@@ -23,20 +30,50 @@ export function EditRecordPageContent({
   const params = useParams<{ id?: string }>();
   const id = recordId ?? params.id ?? "";
   const { status, records, error, loadRecords } = useRecords();
+  const [resolvedRecords, setResolvedRecords] = useState<SakememRecord[]>([]);
+  const cachedRecord = records.find((candidate) => candidate.id === id) ?? null;
   const context = useMemo(() => {
-    const record = records.find((candidate) => candidate.id === id) ?? null;
+    const availableRecords = [...records, ...resolvedRecords];
+    const record = availableRecords.find((candidate) => candidate.id === id) ?? null;
     if (!record) return null;
 
     return {
       record,
-      partners: getPartners(records, record),
-      linkCandidates: filterLinkCandidates(records, record),
+      partners: getPartners(availableRecords, record),
+      linkCandidates: filterLinkCandidates(availableRecords, record),
     };
-  }, [id, records]);
+  }, [id, records, resolvedRecords]);
 
   useEffect(() => {
     void loadRecords().catch(() => undefined);
   }, [loadRecords]);
+
+  useEffect(() => {
+    if (status !== "ready" || !id) {
+      return;
+    }
+
+    let active = true;
+    const supabase = createClient();
+    void Promise.resolve(cachedRecord ?? fetchRecordById(supabase, id))
+      .then(async (record) => {
+        if (!record || !active) return;
+        const [partners, candidates] = await Promise.all([
+          record.pair_id
+            ? fetchRecordsByPairId(supabase, record.pair_id)
+            : Promise.resolve([]),
+          fetchUnpairedOppositeRecords(supabase, record.category),
+        ]);
+        if (active) {
+          setResolvedRecords([record, ...partners, ...candidates]);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, [cachedRecord, id, status]);
 
   if (status === "idle" || status === "loading") {
     return <EditRecordPageSkeleton />;

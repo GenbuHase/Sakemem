@@ -25,7 +25,15 @@ export function RecordsPageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { profile } = useProfile();
-  const { status, records, error, loadRecords } = useRecords();
+  const {
+    status,
+    records,
+    error,
+    hasMore,
+    loadingMore,
+    loadMoreRecords,
+    loadRecords,
+  } = useRecords();
   const initialFilters = useMemo(
     () => parseRecordFilters(Object.fromEntries(searchParams.entries())),
     [searchParams],
@@ -83,6 +91,9 @@ export function RecordsPageContent() {
           allRecords={records}
           initialFilters={initialFilters}
           shareUsername={profile?.username ?? null}
+          hasMore={hasMore}
+          loadingMore={loadingMore}
+          onLoadMore={() => void loadMoreRecords().catch(() => undefined)}
         />
       )}
     </div>

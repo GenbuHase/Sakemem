@@ -215,19 +215,19 @@ export function RecordPairingSection({
     linkRecordPair,
     initialState,
   );
-  const { replaceRecords } = useRecords();
+  const { upsertRecords } = useRecords();
 
   useEffect(() => {
     if (unlinkState?.records) {
-      replaceRecords(unlinkState.records);
+      upsertRecords(unlinkState.records);
     }
-  }, [replaceRecords, unlinkState]);
+  }, [unlinkState, upsertRecords]);
 
   useEffect(() => {
     if (linkState?.records) {
-      replaceRecords(linkState.records);
+      upsertRecords(linkState.records);
     }
-  }, [linkState, replaceRecords]);
+  }, [linkState, upsertRecords]);
 
   const pending = unlinking || linking;
   const lastError = unlinkState?.error ?? linkState?.error;

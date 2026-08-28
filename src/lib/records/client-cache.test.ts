@@ -42,6 +42,16 @@ describe("client record cache", () => {
     ]);
   });
 
+  it("uses the ID as a stable ordering tie-breaker", () => {
+    const first = makeRecord("00000000-0000-0000-0000-000000000001");
+    const second = makeRecord("00000000-0000-0000-0000-000000000002");
+
+    expect(sortCachedRecords([first, second]).map(({ id }) => id)).toEqual([
+      second.id,
+      first.id,
+    ]);
+  });
+
   it("applies create and update results without duplicating records", () => {
     const original = makeRecord("record-1", { name: "更新前" });
     const updated = makeRecord("record-1", { name: "更新後" });

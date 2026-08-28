@@ -21,7 +21,6 @@ import {
 import {
   clearOrphanedPair,
   deleteRecordById,
-  fetchAllRecords,
   fetchRecordById,
   fetchRecordsByPairId,
   insertRecords,
@@ -215,9 +214,18 @@ export async function unlinkRecordPair(
     }
 
     const previousPairId = record.pair_id;
+    const previousPartners = await fetchRecordsByPairId(supabase, previousPairId);
     await setRecordsPairId(supabase, [id], null);
     await clearOrphanedPair(supabase, previousPairId);
-    const records = await fetchAllRecords(supabase);
+    const remainingPartners = await fetchRecordsByPairId(supabase, previousPairId);
+    const records = [
+      { ...record, pair_id: null },
+      ...(remainingPartners.length > 0
+        ? remainingPartners
+        : previousPartners
+            .filter((partner) => partner.id !== id)
+            .map((partner) => ({ ...partner, pair_id: null }))),
+    ];
     scheduleSharedRecordsRevalidation(supabase, user.id, id);
     return { records };
   } catch (error) {
@@ -266,7 +274,13 @@ export async function linkRecordPair(
       const pairId = record.pair_id ?? partner.pair_id ?? randomUUID();
       await setRecordsPairId(supabase, [record.id, partner.id], pairId);
     }
-    const records = await fetchAllRecords(supabase);
+    const updatedRecord = await fetchRecordById(supabase, record.id);
+    const records =
+      updatedRecord?.pair_id
+        ? await fetchRecordsByPairId(supabase, updatedRecord.pair_id)
+        : [updatedRecord, partner].filter(
+            (candidate): candidate is SakememRecord => candidate !== null,
+          );
     scheduleSharedRecordsRevalidation(supabase, user.id, id, partnerId);
     return { records };
   } catch (error) {

@@ -6,7 +6,8 @@ export function sortCachedRecords(
   return records.toSorted(
     (a, b) =>
       b.date.localeCompare(a.date) ||
-      b.created_at.localeCompare(a.created_at),
+      b.created_at.localeCompare(a.created_at) ||
+      b.id.localeCompare(a.id),
   );
 }
 

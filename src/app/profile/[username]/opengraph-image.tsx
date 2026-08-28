@@ -23,7 +23,7 @@ type Props = {
 
 export default async function Image({ params }: Props) {
   const { username } = await params;
-  const { profile, records } = await getPublicProfilePageData(username);
+  const { profile, totalRecords } = await getPublicProfilePageData(username);
 
   if (!profile) {
     return new ImageResponse(
@@ -162,7 +162,7 @@ export default async function Image({ params }: Props) {
             color: "#52525b",
           }}
         >
-          <span>公開記録 {records.length} 件</span>
+          <span>公開記録 {totalRecords} 件</span>
           <span>{siteName}</span>
         </div>
       </div>

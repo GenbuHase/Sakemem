@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { RecordFiltersForm } from "@/components/records/record-filters";
 import { RecordStats } from "@/components/records/record-stats";
 import { Timeline } from "@/components/records/timeline";
+import { Button } from "@/components/ui/button";
 import {
   filterRecords,
   hasActiveFilters,
@@ -18,12 +19,18 @@ type TimelineContainerProps = {
   allRecords: SakememRecord[];
   initialFilters: RecordFilters;
   shareUsername?: string | null;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 };
 
 export function TimelineContainer({
   allRecords,
   initialFilters,
   shareUsername = null,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }: TimelineContainerProps) {
   // 状態管理
   const [query, setQuery] = useState(initialFilters.query ?? "");
@@ -102,6 +109,12 @@ export function TimelineContainer({
 
       <RecordStats analysis={analysis} />
 
+      {hasMore ? (
+        <p className="text-sm text-zinc-500">
+          {allRecords.length}件を読み込み済みです。さらに記録を読み込めます。
+        </p>
+      ) : null}
+
       {isFiltered ? (
         <p className="text-sm text-zinc-500">
           {filteredRecords.length}件の記録が見つかりました
@@ -113,6 +126,23 @@ export function TimelineContainer({
         filtered={isFiltered}
         shareUsername={shareUsername}
       />
+
+      {hasMore && onLoadMore ? (
+        <div className="flex justify-center pt-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onLoadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? "読み込み中..." : "さらに読み込む"}
+          </Button>
+        </div>
+      ) : allRecords.length > 0 ? (
+        <p className="text-center text-sm text-zinc-500">
+          すべての記録を読み込みました
+        </p>
+      ) : null}
     </div>
   );
 }

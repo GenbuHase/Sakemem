@@ -5,19 +5,34 @@ import { getPublicClient } from "@/lib/supabase/public";
 import { isUuid } from "@/lib/utils/is-uuid";
 import {
   fetchPublicProfile,
+  fetchPublicProfileRecordCount,
   fetchPublicProfileRecords,
+  PUBLIC_PROFILE_RECORDS_PAGE_SIZE,
   fetchSharedPairRecords,
   fetchSharedRecord,
 } from "./fetch-shared";
 
-export const getPublicProfilePageData = cache(async (username: string) => {
+export const getPublicProfilePageData = cache(async (
+  username: string,
+  page = 1,
+) => {
   const supabase = getPublicClient();
-  const [profile, records] = await Promise.all([
+  const safePage = Math.max(1, page);
+  const [profile, records, totalRecords] = await Promise.all([
     fetchPublicProfile(supabase, username),
-    fetchPublicProfileRecords(supabase, username),
+    fetchPublicProfileRecords(supabase, username, {
+      offset: (safePage - 1) * PUBLIC_PROFILE_RECORDS_PAGE_SIZE,
+    }),
+    fetchPublicProfileRecordCount(supabase, username),
   ]);
 
-  return { profile, records };
+  return {
+    profile,
+    records,
+    totalRecords,
+    page: safePage,
+    hasMore: safePage * PUBLIC_PROFILE_RECORDS_PAGE_SIZE < totalRecords,
+  };
 });
 
 export const getSharedRecordPageData = cache(

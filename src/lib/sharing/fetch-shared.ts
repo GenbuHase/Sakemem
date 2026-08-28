@@ -9,6 +9,7 @@ import {
 } from "./mask-record";
 
 type PublicProfileRecordRow = Omit<SakememRecord, "user_id">;
+export const PUBLIC_PROFILE_RECORDS_PAGE_SIZE = 50;
 
 export async function fetchSharedRecord(
   supabase: SupabaseClient,
@@ -67,12 +68,18 @@ export async function fetchPublicProfile(
 export async function fetchPublicProfileRecords(
   supabase: SupabaseClient,
   username: string,
-  limit = 50,
+  {
+    limit = PUBLIC_PROFILE_RECORDS_PAGE_SIZE,
+    offset = 0,
+  }: {
+    limit?: number;
+    offset?: number;
+  } = {},
 ): Promise<SakememRecord[]> {
   const { data, error } = await supabase.rpc("get_public_profile_records", {
     p_username: username,
     p_limit: limit,
-    p_offset: 0,
+    p_offset: Math.max(0, offset),
   });
 
   if (error) {
@@ -83,4 +90,19 @@ export async function fetchPublicProfileRecords(
     ...maskRecordPlace(record),
     user_id: "public",
   }));
+}
+
+export async function fetchPublicProfileRecordCount(
+  supabase: SupabaseClient,
+  username: string,
+): Promise<number> {
+  const { data, error } = await supabase.rpc("get_public_profile_records_count", {
+    p_username: username,
+  });
+
+  if (error) {
+    throw new Error("公開記録数の取得に失敗しました。");
+  }
+
+  return Number(data ?? 0);
 }
