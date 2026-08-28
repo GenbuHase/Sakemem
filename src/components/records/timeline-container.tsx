@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { RecordFiltersForm } from "@/components/records/record-filters";
 import { RecordStats } from "@/components/records/record-stats";
 import { Timeline } from "@/components/records/timeline";
@@ -62,16 +62,24 @@ export function TimelineContainer({
   }, [query, kind, category]);
 
   // クライアントサイドでのリアルタイム・フィルタリングと統計の計算
-  const activeFilters: RecordFilters = {
-    query: debouncedQuery,
-    kind,
-    category: category || undefined,
-  };
+  const activeFilters = useMemo<RecordFilters>(
+    () => ({
+      query: debouncedQuery,
+      kind,
+      category: category || undefined,
+    }),
+    [category, debouncedQuery, kind],
+  );
 
-  const filteredRecords = filterRecords(allRecords, activeFilters);
-  const entries = groupRecordsForTimeline(filteredRecords);
-  const analysis = analyzeRecords(filteredRecords);
-  const isFiltered = hasActiveFilters(activeFilters);
+  const { filteredRecords, entries, analysis, isFiltered } = useMemo(() => {
+    const nextFilteredRecords = filterRecords(allRecords, activeFilters);
+    return {
+      filteredRecords: nextFilteredRecords,
+      entries: groupRecordsForTimeline(nextFilteredRecords),
+      analysis: analyzeRecords(nextFilteredRecords),
+      isFiltered: hasActiveFilters(activeFilters),
+    };
+  }, [activeFilters, allRecords]);
 
   // フィルタクリア処理
   const handleClear = () => {

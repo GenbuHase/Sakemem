@@ -8,6 +8,8 @@ import {
   type SharedRecord,
 } from "./mask-record";
 
+type PublicProfileRecordRow = Omit<SakememRecord, "user_id">;
+
 export async function fetchSharedRecord(
   supabase: SupabaseClient,
   username: string,
@@ -77,7 +79,8 @@ export async function fetchPublicProfileRecords(
     throw new Error("公開記録の取得に失敗しました。");
   }
 
-  return ((data as SakememRecord[]) ?? []).map((record) =>
-    maskRecordPlace(record),
-  );
+  return ((data as PublicProfileRecordRow[]) ?? []).map((record) => ({
+    ...maskRecordPlace(record),
+    user_id: "public",
+  }));
 }

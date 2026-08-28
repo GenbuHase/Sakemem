@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import {
   linkRecordPair,
   unlinkRecordPair,
   type RecordActionState,
 } from "@/app/actions/records";
+import { useRecords } from "@/components/providers/records-provider";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { SectionCard } from "@/components/ui/section-card";
@@ -125,7 +126,8 @@ function PairingRecordCard({
             ? accent.selected
             : "hover:border-zinc-300 hover:shadow-sm",
         )}
-        aria-pressed={selected}
+        role="radio"
+        aria-checked={selected}
       >
         {content}
       </button>
@@ -213,6 +215,19 @@ export function RecordPairingSection({
     linkRecordPair,
     initialState,
   );
+  const { replaceRecords } = useRecords();
+
+  useEffect(() => {
+    if (unlinkState?.records) {
+      replaceRecords(unlinkState.records);
+    }
+  }, [replaceRecords, unlinkState]);
+
+  useEffect(() => {
+    if (linkState?.records) {
+      replaceRecords(linkState.records);
+    }
+  }, [linkState, replaceRecords]);
 
   const pending = unlinking || linking;
   const lastError = unlinkState?.error ?? linkState?.error;
@@ -247,6 +262,7 @@ export function RecordPairingSection({
         ) : null}
 
         <LinkForm
+          key={`${paired}:${linkCandidates.map((candidate) => candidate.id).join(",")}`}
           partnersExist={paired}
           candidates={linkCandidates}
           recordId={record.id}

@@ -11,11 +11,7 @@ import {
   truncateOgText,
 } from "@/lib/metadata/og-image-utils";
 import { siteName } from "@/lib/metadata/site";
-import { createClient } from "@/lib/supabase/server";
-import {
-  fetchPublicProfile,
-  fetchPublicProfileRecords,
-} from "@/lib/sharing/fetch-shared";
+import { getPublicProfilePageData } from "@/lib/sharing/public-data";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
@@ -27,8 +23,7 @@ type Props = {
 
 export default async function Image({ params }: Props) {
   const { username } = await params;
-  const supabase = await createClient();
-  const profile = await fetchPublicProfile(supabase, username);
+  const { profile, records } = await getPublicProfilePageData(username);
 
   if (!profile) {
     return new ImageResponse(
@@ -52,9 +47,10 @@ export default async function Image({ params }: Props) {
     );
   }
 
-  const records = await fetchPublicProfileRecords(supabase, username);
-  const fonts = await loadOgFonts();
-  const avatarDataUrl = await fetchOgAvatarDataUrl(profile.avatar_url);
+  const [fonts, avatarDataUrl] = await Promise.all([
+    loadOgFonts(),
+    fetchOgAvatarDataUrl(profile.avatar_url),
+  ]);
   const displayName = truncateOgText(profile.display_name, 28);
   const usernameLabel = truncateOgText(profile.username, 32);
   const bioPreview = splitOgBioLines(profile.bio ?? "公開晩酌記録");

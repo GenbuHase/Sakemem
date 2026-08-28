@@ -58,30 +58,55 @@ export async function fetchRecordById(
   return (data as SakememRecord | null) ?? null;
 }
 
+export async function fetchRecordsByPairId(
+  supabase: SupabaseClient,
+  pairId: string,
+): Promise<SakememRecord[]> {
+  const { data, error } = await supabase
+    .from(RECORDS_TABLE)
+    .select("*")
+    .eq("pair_id", pairId);
+
+  if (error) {
+    throw new Error("ペア情報の取得に失敗しました。");
+  }
+
+  return (data ?? []) as SakememRecord[];
+}
+
 export async function insertRecords(
   supabase: SupabaseClient,
   records: RecordInsert[],
-): Promise<void> {
-  const { error } = await supabase.from(RECORDS_TABLE).insert(records);
+): Promise<SakememRecord[]> {
+  const { data, error } = await supabase
+    .from(RECORDS_TABLE)
+    .insert(records)
+    .select("*");
 
   if (error) {
     throw new Error("記録の保存に失敗しました。");
   }
+
+  return (data ?? []) as SakememRecord[];
 }
 
 export async function updateRecordById(
   supabase: SupabaseClient,
   id: string,
   patch: RecordWritePayload,
-): Promise<void> {
-  const { error } = await supabase
+): Promise<SakememRecord> {
+  const { data, error } = await supabase
     .from(RECORDS_TABLE)
     .update(patch)
-    .eq("id", id);
+    .eq("id", id)
+    .select("*")
+    .single();
 
   if (error) {
     throw new Error("記録の更新に失敗しました。");
   }
+
+  return data as SakememRecord;
 }
 
 export async function deleteRecordById(

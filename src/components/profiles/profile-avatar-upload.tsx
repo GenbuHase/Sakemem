@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { removeAvatar, uploadAvatar } from "@/app/actions/profiles";
+import { useProfile } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { validateAvatarFile } from "@/lib/profiles/upload-avatar";
 import { ProfileAvatar } from "./profile-avatar";
@@ -19,6 +20,7 @@ export function ProfileAvatarUpload({
   onAvatarUrlChange,
   onUploadingChange,
 }: ProfileAvatarUploadProps) {
+  const { updateProfile: updateProfileCache } = useProfile();
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +64,9 @@ export function ProfileAvatarUpload({
     if (result.url) {
       setPreviewUrl(null);
       onAvatarUrlChange(result.url);
+      if (result.profile) {
+        updateProfileCache(result.profile);
+      }
       if (inputRef.current) {
         inputRef.current.value = "";
       }
@@ -86,6 +91,9 @@ export function ProfileAvatarUpload({
     }
 
     onAvatarUrlChange(null);
+    if (result.profile) {
+      updateProfileCache(result.profile);
+    }
     if (inputRef.current) {
       inputRef.current.value = "";
     }

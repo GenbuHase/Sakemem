@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useState } from "react";
 import {
   updateRecord,
   type RecordActionState,
 } from "@/app/actions/records";
+import { useRecords } from "@/components/providers/records-provider";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Select, TextInput } from "@/components/ui/inputs";
@@ -29,7 +31,16 @@ export function EditRecordForm({ record }: EditRecordFormProps) {
     updateRecord,
     initialState,
   );
+  const { upsertRecords } = useRecords();
+  const router = useRouter();
   const [category, setCategory] = useState<RecordCategory>(record.category);
+
+  useEffect(() => {
+    if (state?.error || !state?.records) return;
+
+    upsertRecords(state.records);
+    router.replace("/records");
+  }, [router, state, upsertRecords]);
 
   const isFood = isFoodCategory(record.category);
   const categoryOptions = isFood

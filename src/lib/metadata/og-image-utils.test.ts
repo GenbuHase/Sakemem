@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   OG_BIO_MAX_LENGTH,
   OG_ELLIPSIS,
+  isAllowedOgAvatarUrl,
   sanitizeOgText,
   splitOgBioLineSegments,
   splitOgBioLines,
@@ -77,5 +78,49 @@ describe("splitOgBioLineSegments", () => {
     expect(splitOgBioLineSegments("┆Saidai Contest 2023 準グランプリ")).toEqual(
       ["┆", "Saidai", "Contest", "2023", "準グランプリ"],
     );
+  });
+});
+
+describe("isAllowedOgAvatarUrl", () => {
+  const supabaseUrl = "https://example.supabase.co";
+
+  it("allows public profile images from the configured Supabase origin", () => {
+    expect(
+      isAllowedOgAvatarUrl(
+        `${supabaseUrl}/storage/v1/object/public/profile-images/user/avatar.webp`,
+        supabaseUrl,
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects external origins and other buckets", () => {
+    expect(
+      isAllowedOgAvatarUrl(
+        "https://attacker.example/internal",
+        supabaseUrl,
+      ),
+    ).toBe(false);
+    expect(
+      isAllowedOgAvatarUrl(
+        `${supabaseUrl}/storage/v1/object/public/other/avatar.webp`,
+        supabaseUrl,
+      ),
+    ).toBe(false);
+  });
+
+  it("allows plain HTTP only for a local Supabase origin", () => {
+    const localUrl = "http://127.0.0.1:54321";
+    expect(
+      isAllowedOgAvatarUrl(
+        `${localUrl}/storage/v1/object/public/profile-images/user/avatar.webp`,
+        localUrl,
+      ),
+    ).toBe(true);
+    expect(
+      isAllowedOgAvatarUrl(
+        "http://example.com/storage/v1/object/public/profile-images/avatar.webp",
+        "http://example.com",
+      ),
+    ).toBe(false);
   });
 });

@@ -1,29 +1,32 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { checkUsernameAvailable } from "@/app/actions/profiles";
+import { useEffect, useId, useState } from "react";
+import { useAuth } from "@/components/providers/auth-provider";
 import { TextInput } from "@/components/ui/inputs";
+import { isUsernameAvailable } from "@/lib/profiles/repository";
 import { validateUsernameFormat } from "@/lib/profiles/validate-username";
+import { createClient } from "@/lib/supabase/client";
 
 type UsernameFieldProps = {
   defaultValue?: string;
   originalUsername?: string;
-  siteHost?: string;
   onUsernameChange?: (username: string) => void;
 };
 
 export function UsernameField({
   defaultValue = "",
   originalUsername,
-  siteHost = "sakemem.app",
   onUsernameChange,
 }: UsernameFieldProps) {
+  const { user } = useAuth();
+  const messageId = useId();
+  const [supabase] = useState(createClient);
   const [value, setValue] = useState(defaultValue);
   const [debouncedValue, setDebouncedValue] = useState(defaultValue);
   const [availabilityMessage, setAvailabilityMessage] = useState<string | null>(
     null,
   );
-  const [pending, startTransition] = useTransition();
+  const [checkedValue, setCheckedValue] = useState(defaultValue);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedValue(value), 400);
@@ -35,35 +38,53 @@ export function UsernameField({
   const formatError = validateUsernameFormat(trimmed);
   const isUnchanged =
     Boolean(originalUsername) && debouncedTrimmed === originalUsername;
+  const shouldCheck = Boolean(
+    !formatError && !isUnchanged && debouncedTrimmed && user,
+  );
+  const checking = shouldCheck && checkedValue !== debouncedTrimmed;
 
   useEffect(() => {
-    if (formatError || isUnchanged || !debouncedTrimmed) {
+    if (formatError || isUnchanged || !debouncedTrimmed || !user) {
       return;
     }
 
     let active = true;
 
-    void checkUsernameAvailable(debouncedTrimmed).then((result) => {
-      if (!active) return;
-      startTransition(() => {
+    void isUsernameAvailable(supabase, debouncedTrimmed, user.id)
+      .then((available) => {
+        if (!active) return;
         setAvailabilityMessage(
-          result.available
+          available
             ? "このユーザー名は使用できます"
             : "このユーザー名は使用されています",
         );
+      })
+      .catch(() => {
+        if (active) {
+          setAvailabilityMessage("ユーザー名を確認できませんでした");
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setCheckedValue(debouncedTrimmed);
+        }
       });
-    });
 
     return () => {
       active = false;
     };
-  }, [debouncedTrimmed, formatError, isUnchanged]);
+  }, [debouncedTrimmed, formatError, isUnchanged, supabase, user]);
 
   const message =
     formatError ??
     (originalUsername && trimmed === originalUsername
       ? null
       : availabilityMessage);
+  const displayedMessage =
+    checking && !formatError ? "確認中..." : message;
+  const invalid = Boolean(
+    formatError || message === "このユーザー名は使用されています",
+  );
 
   return (
     <div className="space-y-1">
@@ -79,16 +100,20 @@ export function UsernameField({
           onUsernameChange?.(event.target.value);
         }}
         autoComplete="username"
+        aria-describedby={displayedMessage ? messageId : undefined}
+        aria-invalid={invalid}
       />
-      {message ? (
+      {displayedMessage ? (
         <p
+          id={messageId}
+          role="status"
           className={`text-xs ${
-            message.includes("使用できます")
+            displayedMessage.includes("使用できます")
               ? "text-emerald-600"
               : "text-zinc-500"
           }`}
         >
-          {pending && !formatError ? "確認中..." : message}
+          {displayedMessage}
         </p>
       ) : null}
     </div>

@@ -1,17 +1,18 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
 import {
   createProfile,
   updateProfile,
   type ProfileActionState,
 } from "@/app/actions/profiles";
+import { useProfile } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { TextArea, TextInput } from "@/components/ui/inputs";
 import { SectionCard } from "@/components/ui/section-card";
 import type { Profile } from "@/lib/profiles/types";
-import { getSiteUrl } from "@/lib/sharing/build-share-url";
 import { ProfileAvatarUpload } from "./profile-avatar-upload";
 import { ProfilePublicPreviewCard } from "./profile-public-preview-card";
 import { UsernameField } from "./username-field";
@@ -25,7 +26,8 @@ type ProfileSettingsFormProps = {
 
 export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps) {
   const action = mode === "create" ? createProfile : updateProfile;
-  const [state, formAction, pending] = useActionState(action, initialState);
+  const { updateProfile: updateProfileCache } = useProfile();
+  const router = useRouter();
   const [displayName, setDisplayName] = useState(profile?.display_name ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(
     profile?.avatar_url ?? null,
@@ -36,37 +38,38 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
   const [showUrlSavedNotice, setShowUrlSavedNotice] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
-  useEffect(() => {
-    if (profile?.username) {
-      setLiveUsername(profile.username);
+  async function submitAction(
+    previousState: ProfileActionState | null,
+    formData: FormData,
+  ) {
+    const result = await action(previousState, formData);
+
+    if (result.profile) {
+      updateProfileCache(result.profile);
     }
-  }, [profile?.username]);
+    if (result.success && result.username) {
+      setConfirmUsernameChange(false);
+      setShowUrlSavedNotice(result.username !== liveUsername);
+      setLiveUsername(result.username);
+      setDraftUsername(result.username);
+    }
+    if (result.profile && mode === "create") {
+      router.replace("/records");
+    }
 
-  useEffect(() => {
-    if (!state?.success || !state.username) return;
+    return result;
+  }
 
-    setConfirmUsernameChange(false);
-    setLiveUsername((prev) => {
-      if (prev !== state.username) {
-        setShowUrlSavedNotice(true);
-      }
-      return state.username!;
-    });
-    setDraftUsername(state.username);
-  }, [state?.success, state?.username]);
+  const [state, formAction, pending] = useActionState(
+    submitAction,
+    initialState,
+  );
 
   useEffect(() => {
     if (!showUrlSavedNotice) return;
     const timer = setTimeout(() => setShowUrlSavedNotice(false), 4000);
     return () => clearTimeout(timer);
   }, [showUrlSavedNotice]);
-
-  let siteHost = "localhost:3000";
-  try {
-    siteHost = new URL(getSiteUrl()).host;
-  } catch {
-    // fallback
-  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (
@@ -123,7 +126,6 @@ export function ProfileSettingsForm({ mode, profile }: ProfileSettingsFormProps)
           <UsernameField
             defaultValue={profile?.username}
             originalUsername={liveUsername}
-            siteHost={siteHost}
             onUsernameChange={setDraftUsername}
           />
           <TextArea

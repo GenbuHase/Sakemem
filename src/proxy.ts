@@ -1,12 +1,17 @@
-import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import { NextResponse, type NextRequest } from "next/server";
+import { rewriteAtUsernameToProfilePath } from "@/lib/routing/public-profile-path";
 
-export async function proxy(request: NextRequest) {
-  return await updateSession(request);
+export function proxy(request: NextRequest) {
+  const profilePath = rewriteAtUsernameToProfilePath(request.nextUrl.pathname);
+  if (!profilePath) {
+    return NextResponse.next();
+  }
+
+  const url = request.nextUrl.clone();
+  url.pathname = profilePath;
+  return NextResponse.rewrite(url);
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|serwist|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
-  ],
+  matcher: "/@:username/:path*",
 };

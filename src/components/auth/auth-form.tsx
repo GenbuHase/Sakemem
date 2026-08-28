@@ -1,23 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
-import {
-  login,
-  signup,
-  type AuthActionState,
-} from "@/app/actions/auth";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { TextInput } from "@/components/ui/inputs";
 import { SectionCard } from "@/components/ui/section-card";
+import { createClient } from "@/lib/supabase/client";
 
 type AuthFormProps = {
   mode: "login" | "signup";
   nextPath?: string;
 };
 
-const initialState: AuthActionState | null = null;
+type AuthFormState = {
+  error?: string;
+  success?: string;
+};
 
 const MODE_CONFIG = {
   login: {
@@ -37,10 +38,87 @@ const MODE_CONFIG = {
 };
 
 export function AuthForm({ mode, nextPath }: AuthFormProps) {
-  const action = mode === "login" ? login : signup;
-  const [state, formAction, pending] = useActionState(action, initialState);
-
+  const [supabase] = useState(createClient);
+  const [state, setState] = useState<AuthFormState | null>(null);
+  const [pending, setPending] = useState(false);
+  const { status } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const config = MODE_CONFIG[mode];
+  const requestedNext = nextPath ?? searchParams.get("next") ?? "";
+  const queryError = mode === "login" ? searchParams.get("error") : null;
+  const safeNext =
+    requestedNext.startsWith("/") && !requestedNext.startsWith("//")
+      ? requestedNext
+      : "/records";
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace(safeNext);
+    }
+  }, [router, safeNext, status]);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setPending(true);
+    setState(null);
+
+    const formData = new FormData(event.currentTarget);
+    const email = String(formData.get("email") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+
+    try {
+      if (mode === "login") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) {
+          setState({
+            error:
+              "ログインに失敗しました。メールアドレスとパスワードを確認してください。",
+          });
+          return;
+        }
+
+        router.replace(safeNext);
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        setState({
+          error: "登録に失敗しました。別のメールアドレスをお試しください。",
+        });
+        return;
+      }
+
+      if (data.user && !data.session) {
+        setState({
+          success:
+            "確認メールを送信しました。メール内のリンクから登録を完了してください。",
+        });
+        return;
+      }
+
+      router.replace(safeNext);
+    } catch {
+      setState({
+        error:
+          mode === "login"
+            ? "ログインに失敗しました。通信環境を確認してください。"
+            : "登録に失敗しました。通信環境を確認してください。",
+      });
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <div className="w-full max-w-sm">
@@ -54,11 +132,7 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
       </div>
 
       <SectionCard>
-        <form action={formAction} className="space-y-4">
-          {mode === "login" && nextPath ? (
-            <input type="hidden" name="next" value={nextPath} />
-          ) : null}
-
+        <form onSubmit={handleSubmit} className="space-y-4">
           <TextInput
             id="email"
             name="email"
@@ -80,8 +154,10 @@ export function AuthForm({ mode, nextPath }: AuthFormProps) {
             placeholder="6文字以上"
           />
 
-          {state?.error ? (
-            <FormMessage variant="error">{state.error}</FormMessage>
+          {state?.error ?? queryError ? (
+            <FormMessage variant="error">
+              {state?.error ?? queryError}
+            </FormMessage>
           ) : null}
 
           {state?.success ? (

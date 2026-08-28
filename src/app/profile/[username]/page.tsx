@@ -6,11 +6,7 @@ import { Timeline } from "@/components/records/timeline";
 import { EmptyState } from "@/components/ui/empty-state";
 import { buildPageMetadata } from "@/lib/metadata/build-metadata";
 import { buildPublicProfileMetadataInput } from "@/lib/metadata/public-profile";
-import { createClient } from "@/lib/supabase/server";
-import {
-  fetchPublicProfile,
-  fetchPublicProfileRecords,
-} from "@/lib/sharing/fetch-shared";
+import { getPublicProfilePageData } from "@/lib/sharing/public-data";
 import { groupRecordsForTimeline } from "@/lib/records/group-timeline";
 
 type PublicProfilePageProps = {
@@ -21,14 +17,12 @@ export async function generateMetadata({
   params,
 }: PublicProfilePageProps): Promise<Metadata> {
   const { username } = await params;
-  const supabase = await createClient();
-  const profile = await fetchPublicProfile(supabase, username);
+  const { profile, records } = await getPublicProfilePageData(username);
 
   if (!profile) {
     return { title: "プロフィールが見つかりません" };
   }
 
-  const records = await fetchPublicProfileRecords(supabase, username);
   const meta = buildPublicProfileMetadataInput(profile, records.length);
   return buildPageMetadata(meta);
 }
@@ -37,14 +31,12 @@ export default async function PublicProfilePage({
   params,
 }: PublicProfilePageProps) {
   const { username } = await params;
-  const supabase = await createClient();
-  const profile = await fetchPublicProfile(supabase, username);
+  const { profile, records } = await getPublicProfilePageData(username);
 
   if (!profile) {
     notFound();
   }
 
-  const records = await fetchPublicProfileRecords(supabase, username);
   const entries = groupRecordsForTimeline(records);
 
   return (

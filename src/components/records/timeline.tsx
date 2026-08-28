@@ -53,7 +53,9 @@ export function Timeline({
             {group.entries.map((entry) => (
               <article
                 key={entry.kind === "single" ? entry.record.id : entry.pairId}
-                className={entry.kind === "paired" ? "col-span-full" : "h-full"}
+                className={`timeline-entry ${
+                  entry.kind === "paired" ? "col-span-full" : "h-full"
+                }`}
               >
                 {entry.kind === "single" ? (
                   <RecordDetail

@@ -8,11 +8,7 @@ import {
 } from "@/lib/metadata/og-fonts";
 import { truncateOgText } from "@/lib/metadata/og-image-utils";
 import { siteName } from "@/lib/metadata/site";
-import { createClient } from "@/lib/supabase/server";
-import {
-  fetchSharedPairRecords,
-  fetchSharedRecord,
-} from "@/lib/sharing/fetch-shared";
+import { getSharedRecordPageData } from "@/lib/sharing/public-data";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
@@ -24,8 +20,10 @@ type Props = {
 
 export default async function Image({ params }: Props) {
   const { username, id } = await params;
-  const supabase = await createClient();
-  const record = await fetchSharedRecord(supabase, username, id);
+  const [{ record, pairRecords }, fonts] = await Promise.all([
+    getSharedRecordPageData(username, id),
+    loadOgFonts(),
+  ]);
 
   if (!record) {
     return new ImageResponse(
@@ -50,20 +48,13 @@ export default async function Image({ params }: Props) {
   }
 
   let pairLabel = "";
-  if (record.pair_id) {
-    const pairRecords = await fetchSharedPairRecords(
-      supabase,
-      username,
-      record.pair_id,
-      record.id,
-    );
+  if (pairRecords.length > 0) {
     const foods = pairRecords.filter((r) => isFoodCategory(r.category));
     if (foods.length > 0) {
       pairLabel = `合わせて: ${foods.map((f) => f.name).join("、")}`;
     }
   }
 
-  const fonts = await loadOgFonts();
   const recordName = truncateOgText(record.name, 32);
   const producer = record.producer
     ? truncateOgText(record.producer, 48)

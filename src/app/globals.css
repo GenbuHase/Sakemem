@@ -32,3 +32,10 @@ body {
 ::selection {
   background-color: rgb(24 24 27 / 0.12);
 }
+
+@supports (content-visibility: auto) {
+  .timeline-entry {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 24rem;
+  }
+}

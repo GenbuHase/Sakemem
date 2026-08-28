@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   createRecords,
   type RecordActionState,
 } from "@/app/actions/records";
+import { useRecords } from "@/components/providers/records-provider";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { Select, TextInput } from "@/components/ui/inputs";
@@ -26,11 +28,38 @@ export function RecordForm() {
     createRecords,
     initialState,
   );
+  const { status, loadRecords, upsertRecords } = useRecords();
+  const router = useRouter();
+  const handledResultRef = useRef<RecordActionState | null>(null);
   const [category, setCategory] = useState<RecordCategory>("japanese-sake");
   const [includePairFood, setIncludePairFood] = useState(false);
   const [pairFoodCount, setPairFoodCount] = useState(1);
 
   const isFood = isFoodCategory(category);
+
+  useEffect(() => {
+    if (
+      state?.error ||
+      !state?.records ||
+      handledResultRef.current === state
+    ) {
+      return;
+    }
+
+    handledResultRef.current = state;
+    const createdRecords = state.records;
+
+    async function syncRecords() {
+      if (status !== "ready") {
+        await loadRecords({ force: true }).catch(() => undefined);
+      }
+
+      upsertRecords(createdRecords);
+      router.replace("/records");
+    }
+
+    void syncRecords();
+  }, [loadRecords, router, state, status, upsertRecords]);
 
   return (
     <form action={formAction} className="space-y-6">

@@ -10,6 +10,7 @@ import { cx } from "@/components/ui/styles";
 import { DeleteRecordButton } from "./delete-record-button";
 import { RecordMetadata } from "./record-metadata";
 import { RatingDisplay } from "./rating-display";
+import { SpaEditLink } from "./spa-edit-link";
 import { ShareButton } from "@/components/sharing/share-button";
 
 type RecordDetailProps = {
@@ -67,12 +68,12 @@ export function RecordDetail({
         </div>
         {showActions ? (
           <div className="flex shrink-0 items-center gap-1">
-            <Link
+            <SpaEditLink
               href={`/records/${record.id}/edit`}
               className="rounded-md px-2.5 py-1.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
             >
               編集
-            </Link>
+            </SpaEditLink>
             <DeleteRecordButton id={record.id} pairId={record.pair_id} />
           </div>
         ) : null}

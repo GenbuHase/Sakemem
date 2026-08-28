@@ -1,7 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { revalidatePublicProfile } from "@/lib/routing/revalidate-public";
 import {
@@ -10,7 +10,11 @@ import {
   isUsernameAvailable,
   updateProfileByUserId,
 } from "@/lib/profiles/repository";
-import type { CreateProfileInput, UpdateProfileInput } from "@/lib/profiles/types";
+import type {
+  CreateProfileInput,
+  Profile,
+  UpdateProfileInput,
+} from "@/lib/profiles/types";
 import {
   normalizeUsername,
   validateUsernameFormat,
@@ -24,6 +28,7 @@ export type ProfileActionState = {
   success?: string;
   profileUrl?: string;
   username?: string;
+  profile?: Profile;
 };
 
 function parseDisplayName(value: FormDataEntryValue | null): string {
@@ -62,25 +67,6 @@ async function validateUsernameForSave(
   return normalized;
 }
 
-export async function getMyProfile() {
-  const { supabase, user } = await requireUser();
-  return fetchProfileByUserId(supabase, user.id);
-}
-
-export async function checkUsernameAvailable(
-  username: string,
-): Promise<{ available: boolean }> {
-  const { supabase, user } = await requireUser();
-  const normalized = normalizeUsername(username);
-  const formatError = validateUsernameFormat(normalized);
-  if (formatError) {
-    return { available: false };
-  }
-
-  const available = await isUsernameAvailable(supabase, normalized, user.id);
-  return { available };
-}
-
 export async function createProfile(
   _prevState: ProfileActionState | null,
   formData: FormData,
@@ -89,7 +75,7 @@ export async function createProfile(
 
   const existing = await fetchProfileByUserId(supabase, user.id);
   if (existing) {
-    redirect("/settings/profile");
+    return { error: "プロフィールはすでに作成されています。" };
   }
 
   try {
@@ -105,10 +91,15 @@ export async function createProfile(
       avatarUrlRaw !== null ? String(avatarUrlRaw).trim() || null : null;
 
     const input: CreateProfileInput = { username, display_name, bio, avatar_url };
-    await insertProfile(supabase, user.id, input);
+    const profile = await insertProfile(supabase, user.id, input);
 
-    revalidatePublicProfile(username);
-    redirect("/records");
+    after(() => revalidatePublicProfile(username));
+    return {
+      success: "プロフィールを作成しました。",
+      profile,
+      profileUrl: buildProfileUrl(profile.username),
+      username: profile.username,
+    };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "プロフィールの作成に失敗しました。",
@@ -124,7 +115,7 @@ export async function updateProfile(
 
   const existing = await fetchProfileByUserId(supabase, user.id);
   if (!existing) {
-    redirect("/onboarding/profile");
+    return { error: "プロフィールが見つかりません。" };
   }
 
   try {
@@ -151,10 +142,13 @@ export async function updateProfile(
     if (existing.avatar_url && existing.avatar_url !== updated.avatar_url) {
       await deleteStoredAvatar(supabase, user.id, existing.avatar_url);
     }
-    revalidatePublicProfile(updated.username, existing.username);
+    after(() =>
+      revalidatePublicProfile(updated.username, existing.username),
+    );
 
     return {
       success: "プロフィールを保存しました。",
+      profile: updated,
       profileUrl: buildProfileUrl(updated.username),
       username: updated.username,
     };
@@ -226,16 +220,19 @@ export async function uploadAvatar(
       existing?.avatar_url ??
       String(formData.get("previous_avatar_url") ?? "").trim();
     const previousUrl = previousUrlRaw || null;
+    let updatedProfile: Profile | undefined;
     if (existing) {
-      await updateProfileByUserId(supabase, user.id, { avatar_url: publicUrl });
-      revalidatePublicProfile(existing.username);
+      updatedProfile = await updateProfileByUserId(supabase, user.id, {
+        avatar_url: publicUrl,
+      });
+      after(() => revalidatePublicProfile(existing.username));
     }
 
     if (previousUrl && previousUrl !== publicUrl) {
       await deleteStoredAvatar(supabase, user.id, previousUrl);
     }
 
-    return { url: publicUrl };
+    return { url: publicUrl, profile: updatedProfile };
   } catch (error) {
     console.error("uploadAvatar processing error:", error);
     return { error: "画像の処理に失敗しました。" };
@@ -254,8 +251,15 @@ export async function removeAvatar(
   }
 
   if (existing) {
-    await updateProfileByUserId(supabase, user.id, { avatar_url: null });
-    revalidatePublicProfile(existing.username);
+    const profile = await updateProfileByUserId(supabase, user.id, {
+      avatar_url: null,
+    });
+    after(() => revalidatePublicProfile(existing.username));
+    await deleteStoredAvatar(supabase, user.id, urlToDelete);
+    return {
+      success: "プロフィール画像を削除しました。",
+      profile,
+    };
   }
 
   await deleteStoredAvatar(supabase, user.id, urlToDelete);

@@ -1,8 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { requireUser } from "@/lib/auth/require-user";
 import { fetchProfileByUserId } from "@/lib/profiles/repository";
 import {
@@ -17,8 +16,6 @@ import {
   parsePlace,
 } from "@/lib/records/parse-form";
 import {
-  filterLinkCandidates,
-  getPartners,
   isOppositeRecordType,
 } from "@/lib/records/pairing";
 import {
@@ -26,6 +23,7 @@ import {
   deleteRecordById,
   fetchAllRecords,
   fetchRecordById,
+  fetchRecordsByPairId,
   insertRecords,
   mergePairIds,
   setRecordsPairId,
@@ -36,82 +34,51 @@ import type { SakememRecord } from "@/lib/types/record";
 
 export type RecordActionState = {
   error?: string;
+  records?: SakememRecord[];
+  removedIds?: string[];
 };
 
-export type RecordPairingContext = {
-  record: SakememRecord;
-  partners: SakememRecord[];
-  linkCandidates: SakememRecord[];
-};
-
-const RECORDS_PATH = "/records";
-
-async function revalidateSharedRecord(
+async function revalidateSharedRecords(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createClient>>,
   userId: string,
-  recordId: string,
+  ...recordIds: string[]
 ): Promise<void> {
   const profile = await fetchProfileByUserId(supabase, userId);
   if (!profile) return;
 
-  revalidatePublicRecord(profile.username, recordId);
+  recordIds.forEach((recordId) =>
+    revalidatePublicRecord(profile.username, recordId),
+  );
 }
 
-async function revalidatePublicProfileIfNeeded(
+function scheduleSharedRecordsRevalidation(
+  supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createClient>>,
+  userId: string,
+  ...recordIds: string[]
+): void {
+  after(() => revalidateSharedRecords(supabase, userId, ...recordIds));
+}
+
+function schedulePublicProfileRevalidationIfNeeded(
   supabase: Awaited<ReturnType<typeof import("@/lib/supabase/server").createClient>>,
   userId: string,
   inserts: RecordInsert[],
-): Promise<void> {
+): void {
   const hasPublicRecord = inserts.some(
     (insert) => insert.visibility === "public",
   );
   if (!hasPublicRecord) return;
 
-  const profile = await fetchProfileByUserId(supabase, userId);
-  if (!profile) return;
-
-  revalidatePublicProfile(profile.username);
-}
-
-function revalidateRecord(
-  id?: string,
-): void {
-  revalidatePath(RECORDS_PATH);
-  if (id) {
-    revalidatePath(`${RECORDS_PATH}/${id}/edit`);
-  }
+  after(async () => {
+    const profile = await fetchProfileByUserId(supabase, userId);
+    if (profile) {
+      revalidatePublicProfile(profile.username);
+    }
+  });
 }
 
 function toErrorState(error: unknown, fallback: string): RecordActionState {
   return { error: error instanceof Error ? error.message : fallback };
-}
-
-export async function getRecords(): Promise<SakememRecord[]> {
-  const { supabase } = await requireUser();
-  return fetchAllRecords(supabase);
-}
-
-export async function getRecord(id: string): Promise<SakememRecord | null> {
-  const { supabase } = await requireUser();
-  return fetchRecordById(supabase, id);
-}
-
-export async function getRecordPairingContext(
-  id: string,
-): Promise<RecordPairingContext | null> {
-  const { supabase } = await requireUser();
-  const records = await fetchAllRecords(supabase);
-  const record = records.find((candidate) => candidate.id === id);
-
-  if (!record) {
-    return null;
-  }
-
-  return {
-    record,
-    partners: getPartners(records, record),
-    linkCandidates: filterLinkCandidates(records, record),
-  };
 }
 
 export async function createRecords(
@@ -181,14 +148,12 @@ export async function createRecords(
   }
 
   try {
-    await insertRecords(supabase, inserts);
-    await revalidatePublicProfileIfNeeded(supabase, user.id, inserts);
+    const records = await insertRecords(supabase, inserts);
+    schedulePublicProfileRevalidationIfNeeded(supabase, user.id, inserts);
+    return { records };
   } catch (error) {
     return toErrorState(error, "記録の保存に失敗しました。");
   }
-
-  revalidateRecord();
-  redirect(RECORDS_PATH);
 }
 
 export async function updateRecord(
@@ -212,7 +177,7 @@ export async function updateRecord(
   }
 
   try {
-    await updateRecordById(
+    const record = await updateRecordById(
       supabase,
       id,
       parseRecordWritePayload(formData, {
@@ -222,20 +187,18 @@ export async function updateRecord(
         name,
       }),
     );
-    await revalidateSharedRecord(supabase, user.id, id);
+    scheduleSharedRecordsRevalidation(supabase, user.id, id);
+    return { records: [record] };
   } catch (error) {
     return toErrorState(error, "記録の更新に失敗しました。");
   }
-
-  revalidateRecord(id);
-  redirect(RECORDS_PATH);
 }
 
 export async function unlinkRecordPair(
   _prevState: RecordActionState | null,
   formData: FormData,
 ): Promise<RecordActionState> {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
   const id = parseString(formData, "id");
 
   if (!id) {
@@ -254,19 +217,19 @@ export async function unlinkRecordPair(
     const previousPairId = record.pair_id;
     await setRecordsPairId(supabase, [id], null);
     await clearOrphanedPair(supabase, previousPairId);
+    const records = await fetchAllRecords(supabase);
+    scheduleSharedRecordsRevalidation(supabase, user.id, id);
+    return { records };
   } catch (error) {
     return toErrorState(error, "ペアの解除に失敗しました。");
   }
-
-  revalidateRecord(id);
-  return {};
 }
 
 export async function linkRecordPair(
   _prevState: RecordActionState | null,
   formData: FormData,
 ): Promise<RecordActionState> {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
   const id = parseString(formData, "id");
   const partnerId = parseString(formData, "partner_id");
 
@@ -303,28 +266,39 @@ export async function linkRecordPair(
       const pairId = record.pair_id ?? partner.pair_id ?? randomUUID();
       await setRecordsPairId(supabase, [record.id, partner.id], pairId);
     }
+    const records = await fetchAllRecords(supabase);
+    scheduleSharedRecordsRevalidation(supabase, user.id, id, partnerId);
+    return { records };
   } catch (error) {
     return toErrorState(error, "ペアの設定に失敗しました。");
   }
-
-  revalidateRecord(id);
-  return {};
 }
 
-export async function deleteRecord(id: string): Promise<void> {
-  const { supabase, user } = await requireUser();
+export async function deleteRecord(id: string): Promise<RecordActionState> {
+  try {
+    const { supabase, user } = await requireUser();
+    const record = await fetchRecordById(supabase, id);
+    if (!record) {
+      return { error: "記録が見つかりません。" };
+    }
 
-  const record = await fetchRecordById(supabase, id);
-  if (!record) {
-    throw new Error("記録が見つかりません。");
+    const pairRecords = record.pair_id
+      ? await fetchRecordsByPairId(supabase, record.pair_id)
+      : [];
+    await deleteRecordById(supabase, id);
+
+    if (record.pair_id) {
+      await clearOrphanedPair(supabase, record.pair_id);
+    }
+
+    scheduleSharedRecordsRevalidation(supabase, user.id, id);
+    const remainingPairRecords = pairRecords
+      .filter((candidate) => candidate.id !== id)
+      .map((candidate) =>
+        pairRecords.length <= 2 ? { ...candidate, pair_id: null } : candidate,
+      );
+    return { records: remainingPairRecords, removedIds: [id] };
+  } catch (error) {
+    return toErrorState(error, "記録の削除に失敗しました。");
   }
-
-  await deleteRecordById(supabase, id);
-
-  if (record.pair_id) {
-    await clearOrphanedPair(supabase, record.pair_id);
-  }
-
-  await revalidateSharedRecord(supabase, user.id, id);
-  revalidateRecord();
 }

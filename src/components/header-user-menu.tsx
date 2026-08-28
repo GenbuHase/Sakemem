@@ -16,7 +16,8 @@ type HeaderUserMenuProps = {
   displayName: string;
   username: string;
   avatarUrl: string | null;
-  signOutAction: () => Promise<void>;
+  onSignOut: () => Promise<void>;
+  signOutPending?: boolean;
 };
 
 type MenuState = {
@@ -31,7 +32,8 @@ export function HeaderUserMenu({
   displayName,
   username,
   avatarUrl,
-  signOutAction,
+  onSignOut,
+  signOutPending = false,
 }: HeaderUserMenuProps) {
   const pathname = usePathname();
   const menuId = useId();
@@ -103,14 +105,14 @@ export function HeaderUserMenu({
               <p className="truncate text-xs text-zinc-500">@{username}</p>
             </div>
             <div className="py-1">
-              <Link
+              <a
                 href={`/@${username}`}
                 role="menuitem"
                 className={MENU_ITEM_CLASS}
                 onClick={() => setMenuOpen(false)}
               >
                 公開プロフィールを見る
-              </Link>
+              </a>
               <Link
                 href="/settings/profile"
                 role="menuitem"
@@ -129,15 +131,18 @@ export function HeaderUserMenu({
               </Link>
             </div>
             <div className="border-t border-zinc-100 pt-1">
-              <form action={signOutAction}>
-                <button
-                  type="submit"
-                  role="menuitem"
-                  className={cx(MENU_ITEM_CLASS, "text-zinc-600")}
-                >
-                  ログアウト
-                </button>
-              </form>
+              <button
+                type="button"
+                role="menuitem"
+                className={cx(MENU_ITEM_CLASS, "text-zinc-600")}
+                disabled={signOutPending}
+                onClick={() => {
+                  setMenuOpen(false);
+                  void onSignOut();
+                }}
+              >
+                {signOutPending ? "ログアウト中..." : "ログアウト"}
+              </button>
             </div>
           </div>
         </>

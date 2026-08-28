@@ -1,7 +1,12 @@
 "use client";
 
-import { LinkButton } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/section-card";
+import {
+  BUTTON_BASE_CLASS,
+  BUTTON_SIZE_CLASS,
+  BUTTON_VARIANT_CLASS,
+  cx,
+} from "@/components/ui/styles";
 import { buildProfileUrl } from "@/lib/sharing/build-share-url";
 import { useCopyFeedback } from "@/lib/utils/use-copy-feedback";
 
@@ -70,13 +75,16 @@ export function ProfilePublicPreviewCard({
         ) : null}
 
         <div className="pt-1">
-          <LinkButton
+          <a
             href={`/@${liveUsername}`}
-            variant="secondary"
-            size="sm"
+            className={cx(
+              BUTTON_BASE_CLASS,
+              BUTTON_VARIANT_CLASS.secondary,
+              BUTTON_SIZE_CLASS.sm,
+            )}
           >
             公開プロフィールを見る
-          </LinkButton>
+          </a>
         </div>
       </div>
     </SectionCard>

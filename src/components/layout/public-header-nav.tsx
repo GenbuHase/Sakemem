@@ -12,11 +12,13 @@ import {
 
 type PublicHeaderNavProps = {
   isLoggedIn: boolean;
+  loading?: boolean;
   myUsername: string | null;
 };
 
 export function PublicHeaderNav({
   isLoggedIn,
+  loading = false,
   myUsername,
 }: PublicHeaderNavProps) {
   const pathname = usePathname() ?? "";
@@ -37,7 +39,12 @@ export function PublicHeaderNav({
           aria-label="公開ページナビゲーション"
           className="flex items-center gap-1.5 sm:gap-2"
         >
-          {isLoggedIn ? (
+          {loading ? (
+            <div
+              className="h-9 w-32 animate-pulse rounded-lg bg-zinc-100"
+              aria-label="ナビゲーションを読み込んでいます"
+            />
+          ) : isLoggedIn ? (
             <>
               {showEditProfile ? (
                 <Link href="/settings/profile" className={PUBLIC_NAV_LINK_CLASS}>

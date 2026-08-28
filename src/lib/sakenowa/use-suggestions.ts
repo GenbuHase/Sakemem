@@ -1,7 +1,7 @@
 "use client";
 
 import type { KeyboardEvent } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { SakeSuggestion } from "@/lib/sakenowa/types";
 
 const DEBOUNCE_MS = 300;
@@ -84,25 +84,25 @@ export function useSakeSuggestions(
     };
   }, [enabled, query]);
 
-  function open() {
+  const open = useCallback(() => {
     setState((prev) =>
       prev.suggestions.length > 0 ? { ...prev, isOpen: true } : prev,
     );
-  }
+  }, []);
 
-  function close() {
+  const close = useCallback(() => {
     setState((prev) =>
       prev.isOpen ? { ...prev, isOpen: false, highlightedIndex: -1 } : prev,
     );
-  }
+  }, []);
 
-  function reset() {
+  const reset = useCallback(() => {
     setState(INITIAL_STATE);
-  }
+  }, []);
 
-  function setHighlightedIndex(index: number) {
+  const setHighlightedIndex = useCallback((index: number) => {
     setState((prev) => ({ ...prev, highlightedIndex: index }));
-  }
+  }, []);
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     const { suggestions, isOpen, highlightedIndex } = state;

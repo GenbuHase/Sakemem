@@ -53,29 +53,35 @@ export function DrinkIdentityFields({
   const [name, setName] = useState(defaultName);
   const [producer, setProducer] = useState(defaultProducer);
   const [subInfo, setSubInfo] = useState(defaultSubInfo);
+  const [suggestionsEnabled, setSuggestionsEnabled] = useState(false);
 
   const suggestions = useSakeSuggestions(
     name,
-    enableSakeSuggest,
+    enableSakeSuggest && suggestionsEnabled,
     selectSuggestion,
   );
+  const closeSuggestions = suggestions.close;
+  const suggestionsOpen = suggestions.isOpen;
 
   useEffect(() => {
+    if (!suggestionsOpen) return;
+
     function handleClickOutside(event: MouseEvent) {
       if (!containerRef.current?.contains(event.target as Node)) {
-        suggestions.close();
+        closeSuggestions();
       }
     }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [suggestions]);
+  }, [closeSuggestions, suggestionsOpen]);
 
   function selectSuggestion(suggestion: SakeSuggestion) {
     setName(suggestion.brandName);
     if (suggestion.breweryName) {
       setProducer(suggestion.breweryName);
     }
+    setSuggestionsEnabled(false);
     suggestions.reset();
   }
 
@@ -99,6 +105,7 @@ export function DrinkIdentityFields({
             onChange={(event) => {
               const next = event.target.value;
               setName(next);
+              setSuggestionsEnabled(true);
               if (!next.trim()) {
                 suggestions.reset();
               }

@@ -82,7 +82,7 @@ async function loadFontFile(
   return response.arrayBuffer();
 }
 
-export async function loadOgFonts(): Promise<OgFontData> {
+async function loadOgFontsUncached(): Promise<OgFontData> {
   const fontsDir = path.join(process.cwd(), "public", "fonts");
   const [regular, bold, symbols, mono] = await Promise.all([
     loadFontFile(fontsDir, ["NotoSansJP-Regular.woff"], OG_FONT_CDN.jpRegular),
@@ -100,4 +100,17 @@ export async function loadOgFonts(): Promise<OgFontData> {
   ]);
 
   return { regular, bold, symbols, mono };
+}
+
+let fontsPromise: Promise<OgFontData> | null = null;
+
+export function loadOgFonts(): Promise<OgFontData> {
+  if (!fontsPromise) {
+    fontsPromise = loadOgFontsUncached().catch((error: unknown) => {
+      fontsPromise = null;
+      throw error;
+    });
+  }
+
+  return fontsPromise;
 }

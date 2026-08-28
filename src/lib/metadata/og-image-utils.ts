@@ -1,4 +1,7 @@
 const OG_AVATAR_SIZE = 120;
+const OG_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+const OG_AVATAR_TIMEOUT_MS = 5_000;
+const PROFILE_IMAGES_PATH = "/storage/v1/object/public/profile-images/";
 
 /** Matches profile bio `maxLength` in profile-settings-form. */
 export const OG_BIO_MAX_LENGTH = 200;
@@ -161,21 +164,64 @@ export function splitOgBioLines(text: string): string[] {
   return lines;
 }
 
+export function isAllowedOgAvatarUrl(
+  avatarUrl: string,
+  supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL,
+): boolean {
+  if (!supabaseUrl) {
+    return false;
+  }
+
+  try {
+    const avatar = new URL(avatarUrl);
+    const supabase = new URL(supabaseUrl);
+    const isSecureSupabaseOrigin =
+      supabase.protocol === "https:" ||
+      (supabase.protocol === "http:" &&
+        ["localhost", "127.0.0.1", "[::1]"].includes(supabase.hostname));
+    return (
+      isSecureSupabaseOrigin &&
+      avatar.protocol === supabase.protocol &&
+      avatar.origin === supabase.origin &&
+      avatar.pathname.startsWith(PROFILE_IMAGES_PATH)
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchOgAvatarDataUrl(
   avatarUrl: string | null | undefined,
 ): Promise<string | null> {
-  if (!avatarUrl) {
+  if (!avatarUrl || !isAllowedOgAvatarUrl(avatarUrl)) {
     return null;
   }
 
   try {
-    const response = await fetch(avatarUrl);
+    const response = await fetch(avatarUrl, {
+      redirect: "error",
+      signal: AbortSignal.timeout(OG_AVATAR_TIMEOUT_MS),
+    });
     if (!response.ok) {
+      return null;
+    }
+
+    const contentType = response.headers.get("content-type")?.split(";")[0];
+    if (!["image/jpeg", "image/png", "image/webp"].includes(contentType ?? "")) {
+      return null;
+    }
+
+    const contentLength = Number(response.headers.get("content-length") ?? 0);
+    if (contentLength > OG_AVATAR_MAX_BYTES) {
       return null;
     }
 
     const sharp = (await import("sharp")).default;
     const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.byteLength > OG_AVATAR_MAX_BYTES) {
+      return null;
+    }
+
     const png = await sharp(buffer)
       .resize(OG_AVATAR_SIZE, OG_AVATAR_SIZE, { fit: "cover" })
       .png()

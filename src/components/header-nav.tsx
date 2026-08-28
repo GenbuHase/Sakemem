@@ -15,7 +15,9 @@ type HeaderUserProfile = {
 
 type HeaderNavProps = {
   isLoggedIn: boolean;
-  signOutAction: () => Promise<void>;
+  loading?: boolean;
+  onSignOut: () => Promise<void>;
+  signOutPending?: boolean;
   userProfile?: HeaderUserProfile | null;
 };
 
@@ -26,7 +28,9 @@ type MenuState = {
 
 export function HeaderNav({
   isLoggedIn,
-  signOutAction,
+  loading = false,
+  onSignOut,
+  signOutPending = false,
   userProfile,
 }: HeaderNavProps) {
   const pathname = usePathname();
@@ -59,6 +63,15 @@ export function HeaderNav({
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [menuOpen, pathname]);
+
+  if (loading) {
+    return (
+      <div
+        className="h-9 w-36 animate-pulse rounded-lg bg-zinc-100"
+        aria-label="ナビゲーションを読み込んでいます"
+      />
+    );
+  }
 
   if (!isLoggedIn) {
     return (
@@ -119,21 +132,22 @@ export function HeaderNav({
             displayName={userProfile.displayName}
             username={userProfile.username}
             avatarUrl={userProfile.avatarUrl}
-            signOutAction={signOutAction}
+            onSignOut={onSignOut}
+            signOutPending={signOutPending}
           />
         ) : (
           <>
             <NavLink href="/settings/profile">プロフィール設定</NavLink>
-            <form action={signOutAction}>
-              <Button
-                type="submit"
-                variant="secondary"
-                size="sm"
-                className="whitespace-nowrap"
-              >
-                ログアウト
-              </Button>
-            </form>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="whitespace-nowrap"
+              disabled={signOutPending}
+              onClick={() => void onSignOut()}
+            >
+              {signOutPending ? "ログアウト中..." : "ログアウト"}
+            </Button>
           </>
         )}
       </div>
@@ -144,7 +158,8 @@ export function HeaderNav({
             displayName={userProfile.displayName}
             username={userProfile.username}
             avatarUrl={userProfile.avatarUrl}
-            signOutAction={signOutAction}
+            onSignOut={onSignOut}
+            signOutPending={signOutPending}
           />
         ) : null}
         <MobileMenu
@@ -183,17 +198,17 @@ export function HeaderNav({
             記録する
           </LinkButton>
           {!userProfile ? (
-            <form action={signOutAction} className="w-full">
-              <Button
-                type="submit"
-                variant="secondary"
-                size="sm"
-                fullWidth
-                className="whitespace-nowrap"
-              >
-                ログアウト
-              </Button>
-            </form>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              fullWidth
+              className="whitespace-nowrap"
+              disabled={signOutPending}
+              onClick={() => void onSignOut()}
+            >
+              {signOutPending ? "ログアウト中..." : "ログアウト"}
+            </Button>
           ) : null}
         </MobileMenu>
       </div>

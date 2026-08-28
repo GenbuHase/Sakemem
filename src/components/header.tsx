@@ -1,10 +1,31 @@
-import { signOut } from "@/app/actions/auth";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { HeaderNav } from "@/components/header-nav";
 import { SiteLogo } from "@/components/layout/site-logo";
-import { getHeaderContext } from "@/lib/layout/header-context";
+import {
+  useAuth,
+  useProfile,
+} from "@/components/providers/auth-provider";
 
-export async function Header() {
-  const { isLoggedIn, userProfile } = await getHeaderContext();
+export function Header() {
+  const { status, signOut } = useAuth();
+  const { profile } = useProfile();
+  const router = useRouter();
+  const [signOutPending, setSignOutPending] = useState(false);
+
+  async function handleSignOut() {
+    setSignOutPending(true);
+    try {
+      await signOut();
+      router.replace("/login");
+    } catch {
+      window.alert("ログアウトに失敗しました。もう一度お試しください。");
+    } finally {
+      setSignOutPending(false);
+    }
+  }
 
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-200/80 bg-white/90 backdrop-blur-sm">
@@ -16,9 +37,19 @@ export async function Header() {
           className="flex shrink-0 items-center text-sm"
         >
           <HeaderNav
-            isLoggedIn={isLoggedIn}
-            signOutAction={signOut}
-            userProfile={userProfile}
+            isLoggedIn={status === "authenticated"}
+            loading={status === "loading"}
+            onSignOut={handleSignOut}
+            signOutPending={signOutPending}
+            userProfile={
+              profile
+                ? {
+                    displayName: profile.display_name,
+                    username: profile.username,
+                    avatarUrl: profile.avatar_url,
+                  }
+                : null
+            }
           />
         </nav>
       </div>

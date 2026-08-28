@@ -2,8 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Geist, Geist_Mono } from "next/font/google";
 import { GaNoticeBanner } from "@/components/analytics/ga-notice-banner";
-import { Header } from "@/components/header";
-import { HeaderGate } from "@/components/header-gate";
+import { AuthProvider } from "@/components/providers/auth-provider";
 import { SerwistProvider } from "@/components/serwist-provider";
 import { defaultDescription, getMetadataBase, siteName } from "@/lib/metadata/site";
 import "./globals.css";
@@ -51,10 +50,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col bg-zinc-50 font-sans text-zinc-900">
         <SerwistProvider swUrl="/serwist/sw.js">
-          <HeaderGate>
-            <Header />
-          </HeaderGate>
-          {children}
+          <AuthProvider>{children}</AuthProvider>
           <GaNoticeBanner enabled={Boolean(gaId)} />
         </SerwistProvider>
       </body>
